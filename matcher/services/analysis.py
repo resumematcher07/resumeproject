@@ -17,10 +17,12 @@ SYNONYMS = {"developer": "engineer", "programmer": "engineer", "swe": "engineer"
             "analytics": "analyst", "ml": "machinelearning", "ai": "machinelearning", "qa": "test", "tester": "test",
             "sdet": "test", "quality": "test"}
 PREFERRED_MARK = re.compile(r"nice[\s-]to[\s-]have|preferred|bonus|good[\s-]to[\s-]have|a plus|\bplus\b|desirable", re.I)
+_N = r"(?<![\d.])(?P<n>\d{1,2}(?:\.\d{1,2})?)"            # 1, 12, 1.5  (never the "5" inside "1.5")
+_U = r"(?P<u>years?|yrs?|months?|mos?)\b"
 YEARS_REQ = [
-    re.compile(r"(\d{1,2})\s*\+?\s*(?:-|to|–)?\s*(?:\d{1,2})?\s*\+?\s*(?:years?|yrs?)[^.\n]{0,70}?experience", re.I),
-    re.compile(r"experience[^.\n]{0,50}?(\d{1,2})\s*\+?\s*(?:years?|yrs?)", re.I),
-    re.compile(r"minimum (?:of )?(\d{1,2})\s*\+?\s*(?:years?|yrs?)", re.I),
+    re.compile(_N + r"\s*\+?\s*(?:(?:-|to|\u2013)\s*\d{1,2}(?:\.\d{1,2})?\s*\+?\s*)?" + _U + r"[^.\n]{0,70}?experience", re.I),
+    re.compile(r"experience[^.\n]{0,50}?" + _N + r"\s*\+?\s*" + _U, re.I),
+    re.compile(r"minimum (?:of )?" + _N + r"\s*\+?\s*" + _U, re.I),
 ]
 
 
@@ -71,11 +73,34 @@ def title_score(candidate_titles, job_title):
     return round(min(1.0, best * 1.15), 3)
 
 
+FRESHER_TITLE = re.compile(
+    r"\b(fresher|freshers|fresh graduates?|entry[- ]level|graduates?|trainee|trainees|interns?|internship|apprentice(?:ship)?|campus hire)\b", re.I)
+FRESHER_TEXT = re.compile(
+    r"\bfreshers?\s+(?:are\s+|can\s+|may\s+)?(?:welcome|apply|encouraged|eligible)"
+    r"|\b(?:no|zero)\s+(?:prior\s+|previous\s+|work\s+)?experience\s+(?:is\s+)?(?:required|needed|necessary)"
+    r"|\bentry[- ]level\b|\b0\s*(?:-|to|–)\s*1\s*years?\b", re.I)
+
+
+def is_fresher_friendly(title, description):
+    """True when the job is meant for people with no experience: a fresher/entry-level/trainee/intern title,
+    or the text says freshers are welcome / no experience is required."""
+    return bool(FRESHER_TITLE.search(title or "") or FRESHER_TEXT.search(description or ""))
+
+
 def required_years(text):
+    """Years of experience a posting asks for, as a number of years (0 = it states nothing).
+
+    Understands "3 years", "1.5 years", "7 months" (= 0.58) and ranges like "1-2 years" (the lower number counts).
+    Whole numbers come back as int, others rounded to 2 decimals.
+    """
     for rx in YEARS_REQ:
-        m = rx.search(text)
-        if m and 0 < int(m.group(1)) <= 25:
-            return int(m.group(1))
+        for m in rx.finditer(text):
+            v = float(m.group("n"))
+            if m.group("u").lower().startswith("m"):
+                v = v / 12
+            v = round(v, 2)
+            if 0 < v <= 25:
+                return int(v) if v == int(v) else v
     return 0
 
 
@@ -137,6 +162,7 @@ def evaluate(parsed, job):
         "missing_required": missing_req,
         "missing_preferred": missing_pref,
         "years_needed": yrs_need,
+        "fresher": is_fresher_friendly(job["title"], job["description"]),
         "years_have": yrs_have,
         "years_gap": max(0, round(yrs_need - yrs_have, 1)) if yrs_need else 0,
         "missing_certs": missing_certs,
