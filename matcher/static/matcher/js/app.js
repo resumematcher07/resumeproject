@@ -98,13 +98,14 @@
   });
 
   // ---- result filters ----
-  // "exp" tab: every job you could apply for with the experience on your resume.
-  //   - jobs that state no experience (or 0 years) are ALWAYS shown, for fresher and experienced resumes alike
-  //   - jobs asking up to your years are shown: 1.6 yrs -> jobs asking 1.6 yrs or less (so 1 yr yes, 2 yrs no)
-  //   - a fresher resume (under 1 yr) also sees jobs asking up to 1 yr
+  // "exp" tab: jobs you can apply for with the experience on your resume.
+  //   - jobs for freshers (fresher / entry level / trainee / intern in the title, or "no experience required") ALWAYS show
+  //   - jobs that state no experience (or 0 years) ALWAYS show
+  //   - otherwise the job must ask for no more years than the resume shows (0.6 yr -> 6-7 month jobs yes, "1+ years" no)
   function matchesExperience(j) {
+    if (j.dataset.fresher === '1') return true;
     var need = parseFloat(j.dataset.need) || 0, have = parseFloat(j.dataset.have) || 0;
-    return need <= Math.max(have, 1);
+    return need <= have + 0.05;                      // 0.05 = tolerance for the resume's rounded years (7 months = 0.58 -> 0.6)
   }
   document.querySelectorAll('.pill[data-filter]').forEach(function (p) {
     p.addEventListener('click', function () {
