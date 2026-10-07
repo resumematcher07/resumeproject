@@ -1,0 +1,110 @@
+{% extends "matcher/base.html" %}
+{% block title %}Matching jobs · Resume Job Matcher{% endblock %}
+{% block nav_extra %}
+  <a class="btn ghost sm" href="{% url 'detail' resume.pk %}">← Resume</a>
+  <span class="timer" data-seconds="{{ resume.seconds_left }}"><i></i>Auto-delete in <b>--:--</b></span>
+{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>{{ results|length }} matching job{{ results|length|pluralize }} <span class="grad">newest first</span></h1>
+  <p class="muted">Scanned {{ stats.jobs_scanned }} postings from {{ stats.companies }} company career pages for
+    <b>{{ stats.searched_titles|join:", "|default:"your skills" }}</b>{% if stats.hubs %} in <b>{{ stats.hubs|join:", " }}</b>{% endif %}.
+    {% if stats.hubs %}<span class="muted">Company career pages + official park listings were searched. No job-board API keys are required.</span>{% endif %}
+    {% if stats.unreachable %}<details class="inline"><summary>{{ stats.unreachable|length }} site{{ stats.unreachable|length|pluralize }} unreachable</summary></details>{% endif %}</p>
+</section>
+
+<!-- {{ stats.unreachable|join:" · " }} -->
+<!-- {% if stats.park_reports %}
+<section class="parkreport card">
+  <b>Park listings</b>
+  {% for r in stats.park_reports %}
+  <p class="{% if r.ok %}ok{% else %}bad{% endif %}">{% if r.ok %}✓{% else %}✗{% endif %} <b>{{ r.name }}</b>: {{ r.jobs }} opening{{ r.jobs|pluralize }} read from the official page
+    <details class="inline"><summary>how it was read</summary>{{ r.notes|join:" · " }}</details></p>
+  {% endfor %}
+  {% if not stats.park_jobs %}<p class="muted">0 park openings means the official page could not be read from this server (blocked, JavaScript-only or changed). Run
+    <code>python manage.py diagnose_parks</code> to see exactly why - it takes 10 seconds.</p>{% endif %}
+</section>
+{% endif %} -->
+
+<div class="filters" role="tablist">
+  <button class="pill active" data-filter="all">All</button>
+  <button class="pill" data-filter="eligible">Strong match</button>
+  <!-- <button class="pill" data-filter="certs">Needs certificate</button> -->
+  <button class="pill" data-filter="partial">Close</button>
+  <button class="pill" data-filter="ineligible">Not yet eligible</button>
+</div>
+
+{% for j in results %}
+<article class="job {{ j.verdict }}" data-verdict="{{ j.verdict }}">
+  <div class="ring" style="--score:{{ j.score }}"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="19"/><circle class="bar" cx="22" cy="22" r="19" pathLength="100"/></svg><b>{{ j.score }}</b></div>
+  <div class="job-main">
+    <div class="job-top">
+      <div>
+        <h3>{{ j.title }}</h3>
+        <p class="muted">{{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}
+          {% if j.posted %} · <time data-posted="{{ j.posted }}">{{ j.posted|slice:":10" }}</time>{% endif %}{% if j.sources %} · via {{ j.sources|join:", " }}{% endif %}</p>
+      </div>
+      <span class="badge {{ j.verdict }}">{{ j.verdict_label }}</span>
+    </div>
+
+    {% if j.job_functions or j.job_industries %}
+    <div class="chips">
+      {% for f in j.job_functions %}<span class="chip">{{ f }}</span>{% endfor %}
+      {% for i in j.job_industries %}<span class="chip">{{ i }}</span>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="chips">
+      {% for s in j.matched %}<span class="chip ok">✓ {{ s }}</span>{% endfor %}
+      {% for s in j.missing_required %}<span class="chip bad">✗ {{ s }}</span>{% endfor %}
+      {% for s in j.missing_preferred %}<span class="chip warn">+ {{ s }}</span>{% endfor %}
+    </div>
+
+    {% if j.years_gap %}<p class="note">⏱ Asks for {{ j.years_needed }}+ years; your resume shows about {{ j.years_have|floatformat:"-1" }}.</p>{% endif %}
+
+    {% if j.missing_certs %}
+    <div class="callout">
+      <b>Get these certificates before applying</b>
+      <ul>{% for c in j.missing_certs %}<li>{{ c.name }} <span class="muted">({{ c.provider }})</span> — <a href="{{ c.url }}" target="_blank" rel="noopener">how to get it ↗</a></li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <div class="job-actions">
+      <a class="btn primary sm" href="{{ j.url }}" target="_blank" rel="noopener">View job ↗</a>
+      <details class="tailor">
+        <summary class="btn soft sm">{% if j.needs_resume_update %}Get fresh resume{% else %}Tailored resume{% endif %}</summary>
+        <form method="post" action="{% url 'tailor' resume.pk j.key %}">{% csrf_token %}
+          {% if j.missing_required or j.missing_preferred %}
+          <p class="muted">Tick only the skills you <b>genuinely have</b> but didn't list — they'll be added. Anything else goes on your learning plan below.</p>
+          <div class="checks">
+            {% for s in j.missing_required %}<label><input type="checkbox" name="have_skill" value="{{ s }}"> {{ s }} <em>required</em></label>{% endfor %}
+            {% for s in j.missing_preferred %}<label><input type="checkbox" name="have_skill" value="{{ s }}"> {{ s }}</label>{% endfor %}
+          </div>
+          {% endif %}
+          {% if j.missing_certs %}
+          <p class="muted">Already studying for a certificate? It can be listed as “in progress”.</p>
+          <div class="checks">{% for c in j.missing_certs %}<label><input type="checkbox" name="pursuing_cert" value="{{ c.name }}"> {{ c.name }}</label>{% endfor %}</div>
+          {% endif %}
+          <input type="hidden" name="job_key" value="{{ j.key }}">
+          <div class="btn-row">
+            <button class="btn primary sm" type="submit">⬇ Word (.docx)</button>
+            <button class="btn soft sm" type="submit" formaction="{% url 'latex_new' resume.pk %}">ATS resume · LaTeX / PDF</button>
+          </div>
+        </form>
+      </details>
+    </div>
+
+    {% if j.missing_required %}
+    <details class="plan"><summary>Learning plan for the gaps</summary>
+      <ol>{% for s in j.missing_required %}<li><b>{{ s }}</b> — build a small project using it, then add it to your Skills and a bullet under that project.</li>{% endfor %}</ol>
+    </details>
+    {% endif %}
+  </div>
+</article>
+{% empty %}
+<div class="empty">
+  <h3>No matching openings right now</h3>
+  <p class="muted">Nothing on the configured career pages matched your job title. Try again later, or add more companies in <code>companies.yaml</code>.</p>
+</div>
+{% endfor %}
+{% endblock %}

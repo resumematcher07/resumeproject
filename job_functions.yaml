@@ -1,0 +1,47 @@
+# Global job-function taxonomy used to classify postings from company career pages.
+job_functions:
+  engineering:
+    label: Engineering & Software
+    keywords: [software engineer, software developer, backend, back-end, frontend, front-end, full stack, full-stack, web developer, mobile developer, ios, android, devops, sre, site reliability, platform engineer, cloud engineer, data engineer, ml engineer, machine learning engineer, ai engineer, embedded, firmware, qa engineer, test engineer, automation engineer, security engineer, solutions engineer, infrastructure engineer, network engineer, database engineer, architect]
+  data_ai:
+    label: Data, AI & Analytics
+    keywords: [data scientist, data analyst, data analytics, analytics, machine learning, artificial intelligence, ai, ml, business intelligence, bi analyst, quantitative analyst, statistician, research scientist, data visualization, data architect]
+  ui_ux_design:
+    label: UI/UX & Design
+    keywords: [ux designer, ui designer, ui/ux, product designer, ux researcher, user researcher, interaction designer, visual designer, graphic designer, design systems, content designer, service designer]
+  product:
+    label: Product Management
+    keywords: [product manager, product management, product owner, technical product manager, product analyst, product operations]
+  business:
+    label: Business & Strategy
+    keywords: [business analyst, business development, strategy, strategic, management consultant, consulting, corporate strategy, transformation, chief of staff, business operations]
+  finance:
+    label: Finance & Accounting
+    keywords: [financial analyst, finance, accounting, accountant, controller, fp&a, financial planning, treasury, tax, audit, investment banking, investment analyst, risk analyst, actuarial]
+  sales:
+    label: Sales & Account Management
+    keywords: [sales, account executive, account manager, sales development, business development representative, customer success, solutions consultant, pre-sales]
+  marketing:
+    label: Marketing & Communications
+    keywords: [marketing, growth, brand, communications, public relations, content marketing, seo, sem, social media, demand generation, product marketing]
+  operations:
+    label: Operations & Supply Chain
+    keywords: [operations, supply chain, procurement, logistics, fulfillment, workforce management, program operations, process improvement]
+  hr:
+    label: Human Resources & Recruiting
+    keywords: [human resources, hr, recruiter, recruiting, talent acquisition, people operations, people partner, learning and development, compensation and benefits]
+  legal:
+    label: Legal, Risk & Compliance
+    keywords: [legal, lawyer, attorney, compliance, privacy, regulatory, governance, ethics, contracts, paralegal]
+  customer_support:
+    label: Customer Support & Service
+    keywords: [customer support, customer service, technical support, help desk, support specialist, service representative]
+  research:
+    label: Research
+    keywords: [researcher, research scientist, applied scientist, economist, research engineer, laboratory]
+  healthcare:
+    label: Healthcare & Clinical
+    keywords: [clinical, nurse, physician, medical, healthcare, pharmacist, clinical research]
+  executive:
+    label: Executive & Leadership
+    keywords: [chief executive, chief technology, chief financial, chief product, vice president, vp, director, head of, general manager]

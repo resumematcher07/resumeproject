@@ -1,0 +1,40 @@
+{% extends "matcher/base.html" %}
+{% block wrapcls %} wide{% endblock %}
+{% block title %}ATS resume editor · Resume Job Matcher{% endblock %}
+{% block nav_extra %}
+  <a class="btn ghost sm" href="{% if job %}{% url 'results' resume.pk %}{% else %}{% url 'detail' resume.pk %}{% endif %}">← Back</a>
+  <span class="timer" data-seconds="{{ resume.seconds_left }}"><i></i>Auto-delete in <b>--:--</b></span>
+{% endblock %}
+{% block content %}
+<div class="ed-head">
+  <div>
+    <h1>ATS-friendly resume <span class="grad">· LaTeX editor</span></h1>
+    <p class="muted">{% if job %}Tailored for <b>{{ job.title }}</b> at {{ job.company }}.{% else %}Built from your resume.{% endif %} Edit the LaTeX on the left, then compile to PDF.</p>
+  </div>
+  <div class="ed-tools">
+    <button class="btn primary" id="compileBtn" type="button" {% if not compiler_ok %}disabled title="pdflatex is not installed on this server"{% endif %}>Compile PDF</button>
+    <a class="btn soft" id="dlPdf" href="#" download="resume.pdf" hidden>⬇ Download PDF</a>
+    <a class="btn ghost" href="{% url 'editor_tex' resume.pk gen.pk %}">⬇ Download .tex</a>
+  </div>
+</div>
+
+<form id="edForm" data-compile-url="{% url 'editor_compile' resume.pk gen.pk %}" onsubmit="return false">
+  {% csrf_token %}
+  <div class="ed">
+    <section class="ed-pane">
+      <div class="ed-bar"><span>LaTeX source</span><span id="edStatus">editable</span></div>
+      <textarea id="src" name="source" spellcheck="false" autocomplete="off" autocapitalize="off">{{ source }}</textarea>
+      <pre class="ed-error" id="edError" hidden></pre>
+    </section>
+    <section class="ed-pane">
+      <div class="ed-bar"><span>PDF preview</span><span>ATS-readable text</span></div>
+      <div class="ed-empty" id="edEmpty">
+        <b>{% if compiler_ok %}Press “Compile PDF”{% else %}PDF compiler not installed here{% endif %}</b>
+        <span>{% if compiler_ok %}Your PDF appears here. It is generated on the fly and never stored.{% else %}Download the .tex file and compile it in Overleaf, or install a LaTeX distribution on the server.{% endif %}</span>
+      </div>
+      <iframe id="preview" title="PDF preview" hidden></iframe>
+    </section>
+  </div>
+</form>
+<p class="tips">Tips: keep it one column, keep standard headings (Experience, Education, Skills), and don't add tables, images or icons — ATS software reads plain text best. Edits are kept until this resume is auto-deleted.</p>
+{% endblock %}

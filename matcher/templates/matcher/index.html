@@ -1,0 +1,33 @@
+{% extends "matcher/base.html" %}
+{% block content %}
+<section class="hero">
+  <span class="eyebrow">Private · Rule-based · Auto-deleting</span>
+  <h1>Find jobs you can actually <span class="grad">get</span>.</h1>
+  <p class="lead">Drop in your resume. We read every section, scan company career pages for the newest matching roles, show exactly what you're missing, and hand back a sharper resume.</p>
+</section>
+
+<form class="drop-card" id="uploadForm" method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
+  {% csrf_token %}
+  <label class="dropzone" id="dropzone" for="resumeInput">
+    <input id="resumeInput" type="file" name="resume" accept=".pdf,.docx,.txt,.md" required>
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+    </div>
+    <strong id="dropTitle">Drag &amp; drop your resume</strong>
+    <span class="muted" id="dropHint">or click to browse · PDF, DOCX or TXT · up to 5 MB</span>
+  </label>
+  <button class="btn primary lg" type="submit" id="uploadBtn">Analyse my resume <span aria-hidden="true">→</span></button>
+</form>
+
+{% if existing %}
+<p class="resume-again">You already have a resume in progress ·
+  <a href="{% url 'detail' existing.pk %}">Continue with {{ existing.original_name }}</a></p>
+{% endif %}
+
+<section class="steps">
+  <article class="step"><span class="num">1</span><h3>Reads everything</h3><p>Skills, experience, education, certificates and projects are split into clean categories.</p></article>
+  <article class="step"><span class="num">2</span><h3>Searches careers</h3><p>Company career pages are scanned for your job title and experience level, newest postings first.</p></article>
+  <article class="step"><span class="num">3</span><h3>Closes the gaps</h3><p>Missing skills get a fresh tailored resume. Missing certificates get a clear to-do list.</p></article>
+  <article class="step"><span class="num">4</span><h3>Deletes itself</h3><p>Your file, parsed data and generated resumes vanish after {{ ttl_minutes }} minutes — or instantly on request.</p></article>
+</section>
+{% endblock %}

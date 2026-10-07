@@ -1,0 +1,45 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Resume Job Matcher{% endblock %}</title>
+  <meta name="description" content="Upload a resume, find the newest matching jobs, close skill gaps and get a tailored resume. Files auto-delete after 1 hour.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'matcher/css/style.css' %}">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body{% if resume.pk %} data-ping-url="{% url 'ping' resume.pk %}" data-leave-url="{% url 'leave' resume.pk %}"{% endif %}>
+  <div class="bg-mesh" aria-hidden="true"></div>
+  <header class="nav">
+    <a class="brand" href="{% url 'index' %}">
+      <span class="brand-mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M16 2v4M8 2v4"/>
+  <rect x="3" y="4" width="18" height="18" rx="2"/>
+  <path d="M8 10h8M8 14h8M8 18h5"/>
+</svg>
+</span>
+      <span class="grad">Resume Matcher</span>
+    </a>
+    <div class="nav-right">
+      {% block nav_extra %}{% endblock %}
+    </div>
+  </header>
+
+  <main class="wrap{% block wrapcls %}{% endblock %}">
+    {% if messages %}
+      <div class="toasts">
+        {% for m in messages %}<div class="toast {{ m.tags }}">{{ m }}</div>{% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="foot">
+    <span>🔒 Resumes and everything derived from them are permanently deleted {{ ttl_minutes|default:60 }} minutes after upload.</span>
+  </footer>
+  <script src="{% static 'matcher/js/app.js' %}"></script>
+</body>
+</html>

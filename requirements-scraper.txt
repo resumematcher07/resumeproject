@@ -1,0 +1,3 @@
+# Used only by the GitHub Actions scraper (and your PC if you want live mode)
+-r requirements.txt
+playwright

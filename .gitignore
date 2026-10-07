@@ -1,0 +1,11 @@
+# secrets / private data - NEVER commit these
+db.sqlite3
+media/
+.cache/
+.env
+*.pyc
+__pycache__/
+staticfiles/
+diag/
+# the snapshot is published to the "data" branch by GitHub Actions, not to main
+data/jobs_snapshot.json.gz

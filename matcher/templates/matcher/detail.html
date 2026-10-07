@@ -1,0 +1,103 @@
+{% extends "matcher/base.html" %}
+{% load matcher_extras %}
+{% block title %}{{ p.name }} · Resume Job Matcher{% endblock %}
+{% block nav_extra %}
+  <span class="timer" data-seconds="{{ resume.seconds_left }}" title="Everything is deleted when this reaches zero"><i></i>Auto-delete in <b>--:--</b></span>
+{% endblock %}
+{% block content %}
+<section class="profile">
+  <div class="avatar">{{ p.name|slice:":1" }}</div>
+  <div class="profile-main">
+    <h1>{{ p.name }}</h1>
+    <p class="muted">{% if p.primary_title %}{{ p.primary_title }}{% else %}Job title not detected{% endif %}{% if p.title_source == "summary" and p.latest_title and p.latest_title != p.primary_title %} · latest role: {{ p.latest_title }}{% endif %}</p>
+    <div class="contact">
+      {% if p.email %}<span>✉ {{ p.email }}</span>{% endif %}
+      {% if p.phone %}<span>☎ {{ p.phone }}</span>{% endif %}
+      {% for l in p.links %}<span>🔗 {{ l }}</span>{% endfor %}
+    </div>
+  </div>
+  <div class="kpis">
+    <div title="{{ p.experience_source }}"><b>{{ p.experience_label }}</b><span>experience</span></div>
+    <div><b>{{ p.skills_flat|length }}</b><span>skills found</span></div>
+    <div><b>{{ p.certifications|length }}</b><span>certificates</span></div>
+  </div>
+</section>
+
+<div class="action-bar">
+  <div>
+    <h2>Ready to search</h2>
+    <p class="muted">We'll look for <b>{% if p.titles %}{{ p.titles|slice:":2"|join:", " }}{% else %}roles matching your skills{% endif %}</b> across configured company career pages and official park listings.</p>
+  </div>
+  <div class="actions">
+    <form method="post" action="{% url 'search' resume.pk %}" id="searchForm">{% csrf_token %}
+      <!-- <p class="muted small searchscope">
+        Every search covers all company career pages <b>plus the official Infopark, Technopark and Cyberpark listings</b>,
+        across all industries and job functions (UI/UX, engineering, data, business, finance and more). Nothing to select.
+      </p> -->
+      <button class="btn primary lg" type="submit">Find latest jobs <span aria-hidden="true">→</span></button>
+    </form>
+    <!-- <form method="post" action="{% url 'latex_new' resume.pk %}">{% csrf_token %}
+      <button class="btn ghost" type="submit" title="Editable LaTeX source + PDF export">ATS resume (LaTeX)</button>
+    </form> -->
+    <form method="post" action="{% url 'delete' resume.pk %}" onsubmit="return confirm('Delete this resume and all results now?')">{% csrf_token %}
+      <button class="btn ghost danger" type="submit">Delete now</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid">
+  {% if p.summary %}
+  <article class="card span2"><h3>Summary</h3><p>{{ p.summary }}</p></article>
+  {% endif %}
+
+  <article class="card span2">
+    <h3>Skills <small>{{ p.skills_flat|length }} detected</small></h3>
+    {% for cat, items in p.skills.items %}
+      <div class="chip-group"><span class="chip-label">{{ cat }}</span>
+        {% for s in items %}<span class="chip">{{ s }}</span>{% endfor %}
+      </div>
+    {% empty %}<p class="muted">No known skills detected — add a clear Skills section.</p>{% endfor %}
+  </article>
+
+  <article class="card span2">
+    <h3>Experience <small>{{ p.experience_label }} · {{ p.experience_source }}</small></h3>
+    {% for e in p.experience|entries %}
+      <div class="role">
+        {% if e.head %}<div class="role-head"><b>{{ e.head }}</b>{% if e.date %}<span class="muted">{{ e.date }}</span>{% endif %}</div>{% endif %}
+        {% if e.bullets %}<ul class="lines">{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+    {% empty %}<p class="muted">No Experience section found.</p>{% endfor %}
+  </article>
+
+  <article class="card">
+    <h3>Education</h3>
+    {% if p.education %}<ul class="lines">{% for l in p.education %}<li>{{ l }}</li>{% endfor %}</ul>
+    {% else %}<p class="muted">Not found.</p>{% endif %}
+  </article>
+
+  <article class="card">
+    <h3>Certificates</h3>
+    {% if p.certifications or p.certs_detected %}
+      <ul class="lines">{% for l in p.certifications %}<li>{{ l }}</li>{% endfor %}</ul>
+      {% for c in p.certs_detected %}<span class="chip ok">{{ c }}</span>{% endfor %}
+    {% else %}<p class="muted">None listed.</p>{% endif %}
+  </article>
+
+  <article class="card span2">
+    <h3>Projects</h3>
+    {% if p.projects %}<ul class="lines">{% for e in p.projects|entries %}<li>{% if e.head %}<b>{{ e.head }}</b>{% endif %}{% for b in e.bullets %}<br>{{ b }}{% endfor %}</li>{% endfor %}</ul>
+    {% else %}<p class="muted">No Projects section found.</p>{% endif %}
+  </article>
+
+  {% if p.achievements %}<article class="card"><h3>Achievements</h3><ul class="lines">{% for l in p.achievements %}<li>{{ l }}</li>{% endfor %}</ul></article>{% endif %}
+  {% if p.languages %}<article class="card"><h3>Languages</h3>{% for l in p.languages %}<span class="chip">{{ l }}</span>{% endfor %}</article>{% endif %}
+</div>
+
+<div class="overlay" id="loading" hidden>
+  <div class="spinner"></div>
+  <h3 id="loadTitle">Searching career pages…</h3>
+  <div class="progress"><i id="loadBar"></i></div>
+  <p class="muted" id="loadText">Starting…</p>
+  <p class="muted small">You can keep this tab open — results appear automatically.</p>
+</div>
+{% endblock %}

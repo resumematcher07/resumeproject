@@ -1,0 +1,7 @@
+# Web app (PythonAnywhere + local). No Playwright here: free PythonAnywhere cannot run a browser.
+Django>=5.0,<6.0
+httpx
+pypdf
+python-docx
+pyyaml
+beautifulsoup4
