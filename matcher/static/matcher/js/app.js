@@ -97,17 +97,34 @@
       : days < 31 ? 'posted ' + days + ' days ago' : 'posted ' + Math.floor(days / 30) + ' mo ago';
   });
 
-  // ---- result filters ----
-  document.querySelectorAll('.pill[data-filter]').forEach(function (p) {
-    p.addEventListener('click', function () {
-      document.querySelectorAll('.pill').forEach(function (x) { x.classList.remove('active'); });
-      p.classList.add('active');
-      var f = p.dataset.filter;
-      document.querySelectorAll('.job').forEach(function (j) {
-        j.hidden = !(f === 'all' || j.dataset.verdict === f);
+  // ---- result filters (match strength + experience, combined) ----
+  var fVerdict = 'all', fExp = 'all';
+  function expClass(j) {
+    var need = parseFloat(j.dataset.need) || 0, have = parseFloat(j.dataset.have) || 0;
+    if (!need || need <= have) return 'fits';          // not stated, or you already have enough
+    if (need <= have + 2) return 'stretch';            // within 2 years of what you have
+    return 'more';
+  }
+  function applyFilters() {
+    document.querySelectorAll('.job').forEach(function (j) {
+      var okV = fVerdict === 'all' || j.dataset.verdict === fVerdict;
+      var okE = fExp === 'all' || expClass(j) === fExp;
+      j.hidden = !(okV && okE);
+    });
+  }
+  function wire(attr, setter) {
+    var pills = document.querySelectorAll('.pill[' + attr + ']');
+    pills.forEach(function (p) {
+      p.addEventListener('click', function () {
+        pills.forEach(function (x) { x.classList.remove('active'); });   // only this row, not the other filter row
+        p.classList.add('active');
+        setter(p.getAttribute(attr));
+        applyFilters();
       });
     });
-  });
+  }
+  wire('data-filter', function (v) { fVerdict = v; });
+  wire('data-exp', function (v) { fExp = v; });
 })();
 
 // ---- LaTeX editor: compile + preview ----
