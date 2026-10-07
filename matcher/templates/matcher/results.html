@@ -36,7 +36,7 @@
 </div>
 
 {% for j in results %}
-<article class="job {{ j.verdict }}" data-verdict="{{ j.verdict }}" data-need="{{ j.years_needed|stringformat:'g' }}" data-have="{{ j.years_have|stringformat:'g' }}">
+<article class="job {{ j.verdict }}" data-verdict="{{ j.verdict }}" data-need="{{ j.years_needed|stringformat:'g' }}" data-have="{{ j.years_have|stringformat:'g' }}" data-fresher="{{ j.fresher|yesno:'1,0' }}">
   <div class="ring" style="--score:{{ j.score }}"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="19"/><circle class="bar" cx="22" cy="22" r="19" pathLength="100"/></svg><b>{{ j.score }}</b></div>
   <div class="job-main">
     <div class="job-top">
