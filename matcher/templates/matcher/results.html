@@ -36,7 +36,7 @@
 </div>
 
 {% for j in results %}
-<article class="job {{ j.verdict }}" data-verdict="{{ j.verdict }}" data-need="{{ j.years_needed }}" data-have="{{ j.years_have }}">
+<article class="job {{ j.verdict }}" data-verdict="{{ j.verdict }}" data-need="{{ j.years_needed|stringformat:'g' }}" data-have="{{ j.years_have|stringformat:'g' }}">
   <div class="ring" style="--score:{{ j.score }}"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="19"/><circle class="bar" cx="22" cy="22" r="19" pathLength="100"/></svg><b>{{ j.score }}</b></div>
   <div class="job-main">
     <div class="job-top">
@@ -61,7 +61,7 @@
       {% for s in j.missing_preferred %}<span class="chip warn">+ {{ s }}</span>{% endfor %}
     </div>
 
-    {% if j.years_gap %}<p class="note">⏱ Asks for {{ j.years_needed }}+ years; your resume shows about {{ j.years_have|floatformat:"-1" }}.</p>{% endif %}
+    {% if j.years_gap %}<p class="note">⏱ Asks for {{ j.years_needed|floatformat:"-1" }}+ years; your resume shows about {{ j.years_have|floatformat:"-1" }}.</p>{% endif %}
 
     {% if j.missing_certs %}
     <div class="callout">
