@@ -32,14 +32,7 @@
   <!-- <button class="pill" data-filter="certs">Needs certificate</button> -->
   <button class="pill" data-filter="partial">Close</button>
   <button class="pill" data-filter="ineligible">Not yet eligible</button>
-</div>
-
-<div class="filters" role="tablist" aria-label="Filter by experience">
-  <span class="muted">Experience (you: {{ p.years_experience|floatformat:"-1" }} yrs):</span>
-  <button class="pill active" data-exp="all">Any</button>
-  <button class="pill" data-exp="fits">Fits my experience</button>
-  <button class="pill" data-exp="stretch">Stretch (up to +2 yrs)</button>
-  <button class="pill" data-exp="more">Needs more experience</button>
+  <button class="pill" data-filter="exp">Experience: {% if p.years_experience %}{{ p.years_experience|floatformat:"-1" }} yr{{ p.years_experience|pluralize:"" }}{% else %}fresher{% endif %}</button>
 </div>
 
 {% for j in results %}
