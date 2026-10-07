@@ -34,8 +34,16 @@
   <button class="pill" data-filter="ineligible">Not yet eligible</button>
 </div>
 
+<div class="filters" role="tablist" aria-label="Filter by experience">
+  <span class="muted">Experience (you: {{ p.years_experience|floatformat:"-1" }} yrs):</span>
+  <button class="pill active" data-exp="all">Any</button>
+  <button class="pill" data-exp="fits">Fits my experience</button>
+  <button class="pill" data-exp="stretch">Stretch (up to +2 yrs)</button>
+  <button class="pill" data-exp="more">Needs more experience</button>
+</div>
+
 {% for j in results %}
-<article class="job {{ j.verdict }}" data-verdict="{{ j.verdict }}">
+<article class="job {{ j.verdict }}" data-verdict="{{ j.verdict }}" data-need="{{ j.years_needed }}" data-have="{{ j.years_have }}">
   <div class="ring" style="--score:{{ j.score }}"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="19"/><circle class="bar" cx="22" cy="22" r="19" pathLength="100"/></svg><b>{{ j.score }}</b></div>
   <div class="job-main">
     <div class="job-top">
