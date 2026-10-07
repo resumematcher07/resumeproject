@@ -103,7 +103,7 @@
   function matchesExperience(j) {
     var need = parseFloat(j.dataset.need) || 0, have = parseFloat(j.dataset.have) || 0;
     if (have < 1) return need <= 1;
-    return need >= Math.floor(have) && need <= Math.ceil(have);
+    return need === 0 || (need >= Math.floor(have) && need <= Math.ceil(have));
   }
   document.querySelectorAll('.pill[data-filter]').forEach(function (p) {
     p.addEventListener('click', function () {
