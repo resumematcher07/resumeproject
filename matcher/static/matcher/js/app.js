@@ -97,34 +97,24 @@
       : days < 31 ? 'posted ' + days + ' days ago' : 'posted ' + Math.floor(days / 30) + ' mo ago';
   });
 
-  // ---- result filters (match strength + experience, combined) ----
-  var fVerdict = 'all', fExp = 'all';
-  function expClass(j) {
+  // ---- result filters ----
+  // "exp" tab: jobs that ask for about as many years as the resume shows (1 yr resume -> jobs asking 1 yr).
+  // Resume 1.4 yrs -> jobs asking 1-2 yrs. Resume under 1 yr (fresher) -> jobs asking up to 1 yr, plus jobs that state no years.
+  function matchesExperience(j) {
     var need = parseFloat(j.dataset.need) || 0, have = parseFloat(j.dataset.have) || 0;
-    if (!need || need <= have) return 'fits';          // not stated, or you already have enough
-    if (need <= have + 2) return 'stretch';            // within 2 years of what you have
-    return 'more';
+    if (have < 1) return need <= 1;
+    return need >= Math.floor(have) && need <= Math.ceil(have);
   }
-  function applyFilters() {
-    document.querySelectorAll('.job').forEach(function (j) {
-      var okV = fVerdict === 'all' || j.dataset.verdict === fVerdict;
-      var okE = fExp === 'all' || expClass(j) === fExp;
-      j.hidden = !(okV && okE);
-    });
-  }
-  function wire(attr, setter) {
-    var pills = document.querySelectorAll('.pill[' + attr + ']');
-    pills.forEach(function (p) {
-      p.addEventListener('click', function () {
-        pills.forEach(function (x) { x.classList.remove('active'); });   // only this row, not the other filter row
-        p.classList.add('active');
-        setter(p.getAttribute(attr));
-        applyFilters();
+  document.querySelectorAll('.pill[data-filter]').forEach(function (p) {
+    p.addEventListener('click', function () {
+      document.querySelectorAll('.pill').forEach(function (x) { x.classList.remove('active'); });
+      p.classList.add('active');
+      var f = p.dataset.filter;
+      document.querySelectorAll('.job').forEach(function (j) {
+        j.hidden = !(f === 'all' || (f === 'exp' ? matchesExperience(j) : j.dataset.verdict === f));
       });
     });
-  }
-  wire('data-filter', function (v) { fVerdict = v; });
-  wire('data-exp', function (v) { fExp = v; });
+  });
 })();
 
 // ---- LaTeX editor: compile + preview ----
