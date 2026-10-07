@@ -40,6 +40,18 @@ _FI_REPAIRS = {
 }
 
 
+_MONTH_WORD = (r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|"
+               r"Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)")
+
+
+def split_glued_dates(text):
+    """PDF extraction often glues a date to the word before it: 'ErnakulamAug 2025-Jan 2026' or 'Aug2025'.
+    Without the gap the month is not recognised, the range loses its start month and silently falls back to January."""
+    text = re.sub(rf"(?<=[a-z,)])(?={_MONTH_WORD}\.?,?\s*(?:19|20)\d{{2}}\b)", " ", text)   # 'ErnakulamAug 2025'
+    text = re.sub(rf"\b({_MONTH_WORD})(?=(?:19|20)\d{{2}}\b)", r"\1 ", text)               # 'Aug2025'
+    return text
+
+
 def repair_text(text):
     """Undo common PDF text-extraction damage: ligatures, '|' read as 'j', '{' bullets."""
     text = unicodedata.normalize("NFKC", text.replace(" ", " "))
@@ -49,7 +61,7 @@ def repair_text(text):
     text = re.sub(r"(?<=\S) [jJ] (?=\S)", " | ", text)               # "a j b" is a pipe separator
     for rx, rep in _FI_REPAIRS.items():
         text = re.sub(rx, rep, text)
-    return text
+    return split_glued_dates(text)
 
 
 # ---------- sectioning ----------
