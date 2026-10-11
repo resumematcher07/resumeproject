@@ -15,6 +15,7 @@ from .models import GeneratedResume, Resume, purge_expired
 from pathlib import Path
 
 from .services import analysis, builder, hubs as hubs_mod, latex, parser
+from .services.skills_data import skill_weight
 
 ALLOWED_EXT = {"pdf", "docx", "txt", "md"}
 
@@ -128,13 +129,39 @@ def results(request, pk):
     return render(request, "matcher/results.html", {
         "resume": resume, "p": resume.parsed,
         "results": resume.analysis["results"], "stats": resume.analysis["stats"],
+        "top_skills": _top_skills(resume.parsed),
     })
+
+
+def _top_skills(parsed, n=6):
+    return [s for s in parsed.get("skills_flat", []) if skill_weight(s) >= 1][:n]
+
+
+def _find_result(resume, key):
+    """A job from the automatic search OR from a skills search (both are tailorable)."""
+    data = resume.analysis or {}
+    return next((r for r in data.get("results", []) + data.get("skill_results", []) if r["key"] == key), None)
+
+
+def skill_search(request, pk):
+    """Search jobs by typed skills, independent of the job title."""
+    resume = _get(request, pk)
+    query = request.GET.get("skills", "").strip()[:300]
+    results, stats = [], {}
+    if query:
+        results, stats = analysis.search_by_skills(resume.parsed, query)
+        data = dict(resume.analysis or {})
+        data["skill_results"] = results
+        Resume.objects.filter(pk=pk).update(analysis=data)
+    return render(request, "matcher/skills.html", {
+        "resume": resume, "p": resume.parsed, "query": query, "results": results, "stats": stats,
+        "top_skills": _top_skills(resume.parsed)})
 
 
 @require_POST
 def tailor(request, pk, job_key):
     resume = _get(request, pk)
-    ev = next((r for r in resume.analysis.get("results", []) if r["key"] == job_key), None)
+    ev = _find_result(resume, job_key)
     if not ev:
         raise Http404
     data = builder.build_resume(
@@ -199,7 +226,7 @@ def _gen(request, pk, gid):
 def latex_new(request, pk):
     resume = _get(request, pk)
     job_key = request.POST.get("job_key", "")
-    ev = next((r for r in resume.analysis.get("results", []) if r["key"] == job_key), None) if job_key else None
+    ev = _find_result(resume, job_key) if job_key else None
     source = latex.build_latex(resume.parsed, ev, request.POST.getlist("have_skill"), request.POST.getlist("pursuing_cert"))
     gen = GeneratedResume(resume=resume, job_key=job_key or "ats-base")
     gen.file.save(f"{uuid.uuid4().hex}.tex", ContentFile(source.encode("utf-8")), save=True)
@@ -208,7 +235,7 @@ def latex_new(request, pk):
 
 def editor(request, pk, gid):
     resume, gen = _gen(request, pk, gid)
-    job = next((r for r in resume.analysis.get("results", []) if r["key"] == gen.job_key), None)
+    job = _find_result(resume, gen.job_key)
     return render(request, "matcher/editor.html", {
         "resume": resume, "gen": gen, "source": Path(gen.file.path).read_text(encoding="utf-8"),
         "job": job, "compiler_ok": latex.compiler_available(),
