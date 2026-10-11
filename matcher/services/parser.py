@@ -9,14 +9,28 @@ from .skills_data import find_certs, find_skills, flat_skills
 # ---------- text extraction ----------
 
 
+def _pdf_text(data):
+    """pdfminer keeps word spacing right ('preprocessed 500K+', 'Developed XGBoost'); pypdf glues words across font changes.
+    pypdf stays as the fallback for files pdfminer cannot read."""
+    try:
+        from pdfminer.high_level import extract_text as _pm_extract
+        text = _pm_extract(io.BytesIO(data))
+        text = re.sub(r"[ \t]*\n\s*\n+", "\n", text)                    # pdfminer double-spaces lines
+        if len(text.split()) >= 20:
+            return text
+    except Exception:
+        pass
+    from pypdf import PdfReader
+
+    reader = PdfReader(io.BytesIO(data))
+    return "\n".join((page.extract_text() or "") for page in reader.pages)
+
+
 def extract_text(uploaded_file, filename):
     ext = filename.rsplit(".", 1)[-1].lower()
     data = uploaded_file.read()
     if ext == "pdf":
-        from pypdf import PdfReader
-
-        reader = PdfReader(io.BytesIO(data))
-        return "\n".join((page.extract_text() or "") for page in reader.pages)
+        return _pdf_text(data)
     if ext == "docx":
         from docx import Document
 
@@ -61,6 +75,7 @@ def repair_text(text):
     text = re.sub(r"(?<=\S) [jJ] (?=\S)", " | ", text)               # "a j b" is a pipe separator
     for rx, rep in _FI_REPAIRS.items():
         text = re.sub(rx, rep, text)
+    text = re.sub(r"(?<=[a-z])-[ \t]*\n[ \t]*(?=[a-z])", "", text)           # "predictive model-\ning" -> "predictive modeling"
     return split_glued_dates(text)
 
 
@@ -76,6 +91,7 @@ HEADERS = {
     "projects": r"(personal |academic |key |selected |notable |mini )?projects?",
     "achievements": r"achievements?|awards?( & honou?rs)?|honou?rs|accomplishments?",
     "languages": r"languages?",
+    "additional": r"additional( information| details)?|other( information| details)?|interests|hobbies|miscellaneous|references|declaration|personal (details|information)",
     "activities": r"(community|volunteer|leadership|extra[- ]?curricular|social)[a-z &/]*|activities|positions of responsibility",
 }
 _HEADER_RX = {k: re.compile(rf"^(?:{v}){_MORE}$", re.I) for k, v in HEADERS.items()}
@@ -401,6 +417,55 @@ def split_items(lines, seps=r"\s*\|\s*|\s*;\s*"):
     return out
 
 
+KNOWN_ISSUERS = {x.lower() for x in (
+    "IBM", "Google", "Microsoft", "AWS", "Amazon", "Coursera", "Udemy", "edX", "Forage", "Databricks", "HP Life", "HP", "Oracle",
+    "Cisco", "Meta", "LinkedIn", "LinkedIn Learning", "Great Learning", "Simplilearn", "NPTEL", "Infosys Springboard", "DataCamp",
+    "Kaggle", "freeCodeCamp", "Salesforce", "Tableau", "Deloitte", "Accenture", "PwC", "KPMG", "EY", "Udacity", "Scaler", "Guvi",
+    "Internshala", "Pluralsight", "Codecademy", "Alison", "Skillsoft", "Mindluster", "Snowflake", "Red Hat", "CompTIA", "PMI", "ISC2")}
+_CONNECTOR_END = re.compile(r"(?:\b(?:and|of|in|for|to|with|the|on|at)|&|[—–-])\s*$", re.I)
+_DATE_ONLY = re.compile(r"^\(?\s*(?:(?:" + MONTH + r")\.?,?\s+)?(?:19|20)\d{2}\s*\)?$", re.I)
+
+
+def _is_issuer(part):
+    p = part.strip(" .()")
+    return p.lower() in KNOWN_ISSUERS or (len(p.split()) <= 2 and len(p) <= 12 and p[:1].isupper())
+
+
+def parse_certifications(lines):
+    """'Data Fundamentals - IBM - Deloitte Data Analytics Job Simulation - Forage - ...' (all on one wrapped line) becomes
+    separate 'Name — Issuer' entries instead of one long blob."""
+    joined, buf = [], ""
+    for l in unbullet(lines):                                   # rejoin "(HP" + "Life)" style wrapped brackets
+        buf = f"{buf} {l}".strip()
+        if buf.count("(") <= buf.count(")"):
+            joined.append(buf)
+            buf = ""
+    if buf:
+        joined.append(buf)
+    logical = []
+    for l in joined:                                            # a wrapped line continues the previous one
+        if logical and (_CONNECTOR_END.search(logical[-1]) or l[:1].islower() or re.match(r"^[—–]", l)):
+            logical[-1] = f"{logical[-1]} {l}"
+        else:
+            logical.append(l)
+    out = []
+    for line in logical:
+        for chunk in re.split(r"\s*\|\s*|\s*;\s*", line):
+            parts = [x.strip() for x in re.split(r"\s*[—–]\s*|\s+-\s+", chunk) if x.strip() and not _DATE_ONLY.match(x.strip())]
+            pending = None
+            for part in parts:
+                if pending is not None and _is_issuer(part):
+                    out.append(f"{pending} — {part}")
+                    pending = None
+                else:
+                    if pending is not None:
+                        out.append(pending)
+                    pending = part
+            if pending is not None:
+                out.append(pending)
+    return [c for c in out if len(c) > 2]
+
+
 # ---------- main entry ----------
 
 
@@ -429,7 +494,7 @@ def parse_resume(text):
         exp_basis = [l for k, ls in sections.items() if k not in skip for l in ls]
     exp_info = compute_experience(exp_basis, " ".join(header[:6]) + " " + summary_text)
 
-    cert_lines = split_items(sections.get("certifications", []))
+    cert_lines = parse_certifications(sections.get("certifications", []))
     all_lines = text.splitlines()
     for i, line in enumerate(all_lines):                           # "Certifications and courses: A; B; C"
         m = INLINE_CERTS.search(line)
