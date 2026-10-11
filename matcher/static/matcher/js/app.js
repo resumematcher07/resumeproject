@@ -98,14 +98,15 @@
   });
 
   // ---- result filters ----
-  // "exp" tab: jobs you can apply for with the experience on your resume.
-  //   - jobs for freshers (fresher / entry level / trainee / intern in the title, or "no experience required") ALWAYS show
-  //   - jobs that state no experience (or 0 years) ALWAYS show
-  //   - otherwise the job must ask for no more years than the resume shows (0.6 yr -> 6-7 month jobs yes, "1+ years" no)
+  // "exp" tab: jobs you can apply for with the experience on your resume. The server already decided this for every job
+  // (data-fit = 1): fresher jobs and jobs that state no experience always fit, anything else must ask for no more
+  // years than the resume shows (0.6 yr -> "1+ years" does not fit). Jobs that do not fit stay at the bottom of "All".
   function matchesExperience(j) {
-    if (j.dataset.fresher === '1') return true;
-    var need = parseFloat(j.dataset.need) || 0, have = parseFloat(j.dataset.have) || 0;
-    return need <= have + 0.05;                      // 0.05 = tolerance for the resume's rounded years (7 months = 0.58 -> 0.6)
+    return j.dataset.fit === '1';
+  }
+  function syncDividers() {                          // hide "needs more experience" heading when nothing is listed under it
+    var any = document.querySelector('.job[data-fit="0"]:not([hidden])');
+    document.querySelectorAll('.over-note').forEach(function (n) { n.hidden = !any; });
   }
   document.querySelectorAll('.pill[data-filter]').forEach(function (p) {
     p.addEventListener('click', function () {
@@ -115,6 +116,7 @@
       document.querySelectorAll('.job').forEach(function (j) {
         j.hidden = !(f === 'all' || (f === 'exp' ? matchesExperience(j) : j.dataset.verdict === f));
       });
+      syncDividers();
     });
   });
 })();
