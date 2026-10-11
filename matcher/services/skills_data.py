@@ -14,7 +14,7 @@ SKILLS = {
         "Angular": ["angularjs"], "Vue": ["vue.js", "vuejs"], "Node.js": ["node", "nodejs"],
         "Express": ["express.js"], "Next.js": ["nextjs"], "Spring Boot": ["spring"],
         ".NET": ["dotnet", "asp.net"], "Laravel": [], "Ruby on Rails": ["rails"],
-        "HTML": ["html5"], "CSS": ["css3"], "Tailwind CSS": ["tailwind"], "Bootstrap": [],
+        "HTML": ["html5"], "CSS": ["css3"], "Web Development": ["web developer", "website development"], "Tailwind CSS": ["tailwind"], "Bootstrap": [],
         "REST APIs": ["rest", "restful", "rest api"], "GraphQL": [], "jQuery": [],
     },
     "Cloud & DevOps": {
@@ -36,10 +36,15 @@ SKILLS = {
         "Jupyter": ["jupyter notebook"], "Predictive Modeling": ["predictive modelling", "predictive analytics"],
         "Statistical Analysis": ["statistics", "statistical modeling"], "Data Visualization": ["data visualisation"],
         "TF-IDF": [], "SPSS": [], "Google Analytics": [], "Data Cleaning": ["data preprocessing"],
+        "Forecasting": ["time series forecasting", "demand forecasting"], "Logistic Regression": [], "Regression Analysis": ["linear regression"],
+        "Time Series": ["time-series"], "A/B Testing": ["ab testing", "a/b tests", "experimentation"], "Hypothesis Testing": [],
+        "Data Modeling": ["data modelling"], "Data Warehousing": ["data warehouse"], "Looker": ["looker studio", "data studio"],
+        "DAX": [], "Power Query": [], "Dashboards": ["dashboarding", "dashboard development"], "Data Interpretation": [],
+        "Feature Engineering": [], "Reporting": ["mis reporting", "report generation"],
     },
     "Finance & Accounting": {
         "Financial Modeling": ["financial modelling"], "Financial Analysis": ["investment analysis"],
-        "Budgeting": ["budgeting and forecasting"], "Forecasting": [], "Internal Audit": ["internal audit", "internal controls"],
+        "Budgeting": ["budgeting and forecasting"], "Internal Audit": ["internal audit", "internal controls"],
         "Accounting": ["bookkeeping"], "Bank Reconciliation": ["reconciliation", "reconciliations", "bank reconciliations"],
         "Tally": ["tally erp", "tally prime"], "Accounts Payable": [], "Accounts Receivable": [],
         "Financial Reporting": ["month-end reporting"], "Risk Assessment": ["risk assessments"], "GST": [], "Taxation": [],
@@ -54,7 +59,9 @@ SKILLS = {
     },
     "Business & Soft Skills": {
         "Project Management": [], "Product Management": [], "Leadership": ["team leadership"],
-        "Stakeholder Management": [], "Communication": [], "Problem Solving": [],
+        "Stakeholder Management": [], "Communication": ["communication skills"], "Problem Solving": ["problem-solving"],
+        "Analytical Thinking": ["analytical skills", "analytical mindset", "analytical thinking"], "Attention to Detail": ["detail-oriented", "detail oriented"],
+        "Teamwork": ["team collaboration", "team player", "collaboration", "cross-functional collaboration"], "Time Management": [],
         "Team Management": [], "Mentoring": [], "Jira": [], "Confluence": [],
         "Figma": [], "UI/UX": ["ux", "ui design", "user experience"], "SEO": [],
         "Salesforce": [], "SAP": [], "Recruitment": [], "Customer Support": [],
@@ -130,6 +137,18 @@ def find_skills(text):
 
 def flat_skills(found):
     return [s for group in found.values() for s in group]
+
+
+# Soft skills appear in nearly every posting and every resume, so they must never decide a match (shown, but weight 0).
+SOFT_SKILLS = {"Communication", "Problem Solving", "Leadership", "Team Management", "Mentoring", "Stakeholder Management",
+               "Analytical Thinking", "Attention to Detail", "Teamwork", "Time Management"}
+# Common practices/tools that say little about the role (half weight).
+GENERIC_SKILLS = {"Git", "Agile", "Debugging", "Code Review", "Jira", "Confluence", "Reporting", "Dashboards"}
+
+
+def skill_weight(skill):
+    """0 = soft skill (display only), 0.5 = generic practice, 1 = real technical / domain skill."""
+    return 0.0 if skill in SOFT_SKILLS else (0.5 if skill in GENERIC_SKILLS else 1.0)
 
 
 def skill_category(skill):
