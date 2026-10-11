@@ -1,0 +1,43 @@
+{% extends "matcher/base.html" %}
+{% block title %}Search by skills · Resume Job Matcher{% endblock %}
+{% block nav_extra %}
+  <a class="btn ghost sm" href="{% url 'detail' resume.pk %}">← Resume</a>
+  {% if resume.analysis.results %}<a class="btn ghost sm" href="{% url 'results' resume.pk %}">Job matches</a>{% endif %}
+  <span class="timer" data-seconds="{{ resume.seconds_left }}"><i></i>Auto-delete in <b>--:--</b></span>
+{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>Search jobs by <span class="grad">skills</span></h1>
+  <p class="muted">Type the skills you want to work with. Jobs are found by what they ask for, whatever their title is.
+    Separate skills with commas.</p>
+</section>
+
+<form class="skillsearch" method="get" action="{% url 'skills' resume.pk %}">
+  <input type="text" name="skills" maxlength="300" value="{{ query }}" placeholder="e.g. Python, SQL, Power BI" aria-label="Skills" autofocus>
+  <button class="btn primary sm" type="submit">🔎 Search</button>
+  {% if top_skills %}<a class="btn soft sm" href="{% url 'skills' resume.pk %}?skills={{ top_skills|join:',' }}">Use my skills</a>{% endif %}
+</form>
+
+{% if query %}
+<p class="muted">{{ stats.matched }} job{{ stats.matched|pluralize }} found among {{ stats.jobs_scanned }} postings for
+  <b>{{ stats.skills|join:", " }}{% if stats.skills and stats.keywords %}, {% endif %}{{ stats.keywords|join:", " }}</b>.
+  {% if stats.over_experience %}<span class="muted">Jobs asking for more experience than your resume shows are listed last.</span>{% endif %}</p>
+
+<div class="filters" role="tablist">
+  <button class="pill active" data-filter="all">All</button>
+  <button class="pill" data-filter="exp">Experience: {% if p.years_experience %}{{ p.years_experience|floatformat:"-1" }} yr{{ p.years_experience|pluralize:"" }}{% else %}fresher{% endif %}</button>
+</div>
+
+{% for j in results %}
+{% if not j.exp_fit %}{% ifchanged j.exp_fit %}
+<div class="over-note" role="note">⬇ Needs more experience: these jobs ask for more years than your resume shows. Shown last.</div>
+{% endifchanged %}{% endif %}
+{% include "matcher/_job_card.html" %}
+{% empty %}
+<div class="empty">
+  <h3>No job asks for those skills right now</h3>
+  <p class="muted">Try fewer or more common skills, for example “Python, SQL”.</p>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}
