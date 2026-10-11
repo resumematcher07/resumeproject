@@ -1,81 +1,77 @@
-"""Job snapshot: scrape on GitHub Actions, serve on PythonAnywhere free.
+"""Scrape every career source + official IT-park listing and write data/jobs_snapshot.json.gz.
 
-PythonAnywhere free accounts cannot reach arbitrary career sites, so the scraping runs somewhere else
-(a scheduled GitHub Actions workflow) and writes ONE compressed file, jobs_snapshot.json.gz.
-The web app only ever reads that file (JOB_SOURCE=snapshot) - it makes no outgoing scraping requests.
+Run this where the internet is unrestricted (GitHub Actions, or your own PC) - NOT on PythonAnywhere free:
 
-No resume data is ever part of the snapshot. It contains public job postings only.
+    python manage.py update_snapshot
 """
-import copy
-import gzip
-import json
-import os
-import threading
+import sys
 import time
-from pathlib import Path
 
 from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 
-_lock = threading.Lock()
-_mem = {"mtime": None, "data": None}
-
-
-def snapshot_path():
-    return Path(getattr(settings, "JOB_SNAPSHOT_FILE", settings.BASE_DIR / "data" / "jobs_snapshot.json.gz"))
+from matcher.services import analysis
+from matcher.services import jobs as jobs_mod
+from matcher.services import park_sources, snapshot
 
 
-def enabled():
-    return getattr(settings, "JOB_SOURCE", "live") == "snapshot"
+class Command(BaseCommand):
+    help = "Scrape all job sources and write the compressed snapshot file used by the PythonAnywhere site."
 
+    def add_arguments(self, parser):
+        parser.add_argument("--out", help="Output file (default: data/jobs_snapshot.json.gz)")
+        parser.add_argument("--deadline", type=int, default=300, help="Max seconds to wait for all career sites")
+        parser.add_argument("--detail-limit", type=int, default=2500,
+                            help="Max job descriptions to download for listings that only expose titles (newest first)")
+        parser.add_argument("--description-chars", type=int, default=8000, help="Trim each description to this many characters")
+        parser.add_argument("--force", action="store_true", help="Write even if far fewer jobs than the previous snapshot")
 
-# ---------------------------------------------------------------- write side (GitHub Actions / your PC)
+    def handle(self, *args, **o):
+        settings.JOB_SOURCE = "live"                       # the scraper must really go online
+        settings.JOB_SEARCH_DEADLINE = o["deadline"]
+        settings.PARK_RENDER = True                        # use headless Chromium for JavaScript-only park pages if installed
+        t0 = time.time()
 
-def write_snapshot(jobs, errors, n_companies, parks, path=None):
-    """parks = {key: {"jobs": [...], "report": {...}}}"""
-    path = Path(path or snapshot_path())
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "version": 1,
-        "generated_at": time.time(),
-        "n_companies": n_companies,
-        "errors": errors,
-        "jobs": jobs,
-        "parks": parks,
-    }
-    tmp = path.with_suffix(".tmp")
-    with gzip.open(tmp, "wt", encoding="utf-8", compresslevel=9) as fh:
-        json.dump(payload, fh, ensure_ascii=False, separators=(",", ":"))
-    os.replace(tmp, path)          # atomic: a reader never sees a half-written file
-    return path
+        self.stdout.write("1/4 career sites ...")
+        all_jobs, errors, n_companies = jobs_mod.fetch_all(workers=48, refresh=True)
+        self.stdout.write(f"    {len(all_jobs)} jobs from {n_companies} sources, {len(errors)} unreachable")
 
+        self.stdout.write("2/4 official IT-park listings ...")
+        parks = {}
+        for key in park_sources.PARKS:
+            try:
+                pj, report = park_sources.fetch_park_report(key)
+            except Exception as exc:                       # one broken park must not abort the whole run
+                pj, report = [], {"park": key, "name": park_sources.PARKS[key]["name"], "jobs": 0, "ok": False,
+                                  "notes": [f"{type(exc).__name__}: {str(exc)[:150]}"]}
+            parks[key] = {"jobs": pj, "report": report}
+            self.stdout.write(f"    {key}: {len(pj)} jobs")
 
-# ---------------------------------------------------------------- read side (PythonAnywhere)
+        self.stdout.write("3/4 job descriptions + skills ...")
+        everything = all_jobs + [j for p in parks.values() for j in p["jobs"]]
+        todo = [j for j in everything if j.get("detail") and not j.get("description")]
+        todo.sort(key=lambda j: j.get("posted") or "", reverse=True)
+        jobs_mod.fetch_details(todo[: o["detail_limit"]], workers=32)
+        cap = o["description_chars"]
+        for j in everything:
+            j["req"] = analysis.compute_requirements(j)    # skills / years / fresher flag, read from the FULL text once, here
+            j["description"] = (j.get("description") or "")[:cap]
+            j.pop("detail", None)                          # snapshot jobs are complete; nothing left to fetch later
 
-def load():
-    """Return the snapshot dict (cached in memory; re-read only if the file changed). Empty snapshot if missing."""
-    path = snapshot_path()
-    try:
-        mtime = path.stat().st_mtime
-    except FileNotFoundError:
-        return {"jobs": [], "errors": ["Job snapshot not found - run update_snapshot"], "n_companies": 0, "parks": {}, "generated_at": 0}
-    with _lock:
-        if _mem["mtime"] != mtime:
-            with gzip.open(path, "rt", encoding="utf-8") as fh:
-                _mem["data"] = json.load(fh)
-            _mem["mtime"] = mtime
-        return _mem["data"]
+        # Safety: never replace a good snapshot with a broken one (e.g. GitHub was rate-limited / network down).
+        out = o["out"] or snapshot.snapshot_path()
+        try:
+            previous = len(snapshot.load()["jobs"]) if not o["out"] else 0
+        except Exception:
+            previous = 0
+        if not o["force"] and (not all_jobs or (previous and len(all_jobs) < previous * 0.5)):
+            raise CommandError(f"Only {len(all_jobs)} jobs scraped vs {previous} in the previous snapshot - "
+                               "refusing to overwrite it (use --force to override).")
 
-
-def jobs_copy():
-    """Fresh copies, because the ranking code adds fields to job dicts."""
-    return [dict(j) for j in load()["jobs"]]
-
-
-def park(key):
-    p = load().get("parks", {}).get(key) or {"jobs": [], "report": None}
-    return copy.deepcopy(p["jobs"]), p["report"]
-
-
-def age_hours():
-    g = load().get("generated_at") or 0
-    return round((time.time() - g) / 3600, 1) if g else None
+        self.stdout.write("4/4 writing snapshot ...")
+        path = snapshot.write_snapshot(all_jobs, errors, n_companies, parks, out)
+        size = path.stat().st_size / 1024 / 1024
+        self.stdout.write(self.style.SUCCESS(f"done in {time.time() - t0:.0f}s -> {path} ({size:.1f} MB)"))
+        if size > 90:
+            self.stderr.write("WARNING: snapshot is over 90 MB; GitHub rejects files above 100 MB. Lower --description-chars.")
+            sys.exit(1)
