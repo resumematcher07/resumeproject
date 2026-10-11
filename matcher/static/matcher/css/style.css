@@ -185,3 +185,11 @@ code{background:var(--surface-2);padding:2px 6px;border-radius:6px;font-size:.88
 .parkreport{padding:14px 18px;margin:10px 0 16px;font-size:.9rem}
 .parkreport p{margin:6px 0}.parkreport .ok{color:inherit}.parkreport .bad{color:#b45309}
 .parkreport code{background:var(--surface-2);padding:1px 6px;border-radius:6px}
+
+
+/* search by skills + "needs more experience" divider */
+.skillsearch{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0 18px}
+.skillsearch input[type=text]{flex:1 1 260px;min-width:0;padding:12px 16px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
+.skillsearch input[type=text]:focus{outline:2px solid var(--a1);outline-offset:1px}
+.over-note{margin:26px 0 10px;padding:12px 16px;border-radius:14px;background:var(--surface-2);border:1px dashed var(--line);color:var(--muted);font-weight:600}
+.note.okay{color:var(--ok)} .note.qmatch{color:var(--a1)}
