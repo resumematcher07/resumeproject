@@ -90,9 +90,11 @@ class AnalysisTests(TestCase):
             results, stats = analysis.search_and_rank(self.p)
         titles = [r["title"] for r in results]
         self.assertNotIn("Head Chef", titles)
-        self.assertEqual(titles[0], "Python Developer")          # posted 1 day ago
-        self.assertEqual(titles[-1], "Senior Python Engineer")   # posted 20 days ago
+        # jobs the experience fits come first, newest first; the 10+ years job (resume shows 6) is kept but listed LAST
+        self.assertEqual(titles, ["Backend Engineer", "Senior Python Engineer", "Python Developer"])
+        self.assertEqual([r["exp_fit"] for r in results], [True, True, False])
         self.assertEqual(stats["jobs_scanned"], 4)
+        self.assertEqual(stats["over_experience"], 1)
 
     def test_gaps(self):
         r = analysis.evaluate(self.p, JOBS[1])
@@ -885,3 +887,327 @@ class SnapshotCommandTests(SimpleTestCase):
                         call_command("pull_snapshot", url="https://x.test/s", stdout=StringIO())
                 self.assertEqual(f.read_bytes(), good)                  # old file kept
             snapshot._mem["mtime"] = None
+
+
+class RequiredYearsTests(SimpleTestCase):
+    def test_reads_years_months_decimals_and_ranges(self):
+        from .services.analysis import required_years as ry
+        cases = {
+            "5+ years of experience in Python": 5,
+            "1.5 years experience with Django": 1.5,          # was misread as 5
+            "Minimum 7 months of experience": 0.58,
+            "6 months experience required": 0.5,
+            "1-2 years of experience": 1,                      # lower number of a range
+            "Experience: 3 years": 3,
+            "Requires 2.5 yrs experience": 2.5,
+            "at least 18 months experience": 1.5,
+            "freshers welcome, no experience needed": 0,
+            "0 years experience": 0,
+            "2023 years experience nonsense": 0,
+        }
+        for text, want in cases.items():
+            self.assertEqual(ry(text), want, text)
+
+    def test_results_page_exposes_numbers_for_the_experience_button(self):
+        from django.template.loader import render_to_string
+        job = {"key": "k", "title": "Dev", "company": "C", "location": "", "url": "https://x.test", "posted": "",
+               "score": 80, "verdict": "eligible", "verdict_label": "Strong match", "years_needed": 1.5, "years_have": 1.6,
+               "years_gap": 0, "matched": [], "missing_required": [], "missing_preferred": [], "missing_certs": [],
+               "job_functions": [], "job_industries": [], "snippet": "", "sources": []}
+        html = render_to_string("matcher/results.html", {"resume": mock.Mock(pk="00000000-0000-0000-0000-000000000000", seconds_left=100), "p": {"years_experience": 1.6, "name": "A"},
+                                                         "results": [job], "stats": {"unreachable": [], "park_reports": [], "searched_titles": []}})
+        self.assertIn('data-need="1.5"', html)
+        self.assertIn('data-have="1.6"', html)
+
+
+class GluedDateTests(SimpleTestCase):
+    """PDF text extraction can glue a date to the previous word; the start month used to be lost (Jan fallback)."""
+
+    CV = ("Jane Doe\njane@x.com\n\nEXPERIENCE\n"
+          "Spectrum Softech, ErnakulamAug 2025\u2013Jan 2026\nData Science Trainee\n- Built XGBoost models\n"
+          "Logix Space, Cochin May 2023\nWeb Development Intern\n- Built web pages\n\nEDUCATION\nB.Tech 2021-2025\n")
+
+    def test_glued_month_is_split(self):
+        from matcher.services import parser
+        self.assertEqual(parser.split_glued_dates("ErnakulamAug 2025\u2013Jan 2026"), "Ernakulam Aug 2025\u2013Jan 2026")
+        self.assertEqual(parser.split_glued_dates("Joined Aug2025 as analyst"), "Joined Aug 2025 as analyst")
+
+    def test_normal_words_are_not_touched(self):
+        from matcher.services import parser
+        for text in ["Decision 2024 plan", "Summary of May 2021 report", "Cochin May 2023", "Marketing 2022 results"]:
+            self.assertEqual(parser.split_glued_dates(text), text)
+
+    def test_experience_is_6_plus_1_months_not_14(self):
+        from matcher.services import parser
+        p = parser.parse_resume(self.CV)
+        self.assertEqual(p["experience_months"], 7)        # Aug 2025-Jan 2026 (6) + May 2023 (1)
+        self.assertEqual(p["experience_label"], "7 mo")
+
+
+class FresherFriendlyTests(SimpleTestCase):
+    def test_title_and_text_signals(self):
+        from matcher.services.analysis import is_fresher_friendly as f
+        yes = [("Fresher - Python Developer", ""), ("Graduate Trainee Engineer", ""), ("Data Analyst Intern", ""),
+               ("Entry Level QA", ""), ("Software Engineer", "Freshers are welcome to apply"),
+               ("Software Engineer", "No prior experience required."), ("Analyst", "0-1 years of experience")]
+        no = [("Senior Data Analyst", "5+ years"), ("Internal Auditor", ""), ("International Sales Manager", ""),
+              ("Postgraduate Researcher", ""), ("Dotnet Developer", "Asks 1+ years of experience")]
+        for t, d in yes:
+            self.assertTrue(f(t, d), (t, d))
+        for t, d in no:
+            self.assertFalse(f(t, d), (t, d))
+
+
+# ====================================================================================================================
+# Accuracy tests: resume reading, matching, experience, fresher jobs, skill search
+# ====================================================================================================================
+ANALYST_CV = """JANE ANALYST
+jane@example.com | +1 415 555 0100
+SUMMARY
+Entry-level Data Analyst with hands-on experience in Python, SQL, Pandas, NumPy, Power BI, Tableau, statistical
+analysis, data cleaning, and machine learning. Experienced in transforming large datasets into actionable insights,
+building predictive models and dashboards, and communicating analytical findings through data visualization. Strong
+analytical thinking, attention to detail, and problem-solving skills with a Computer Engineering background.
+EDUCATION
+St Thomas College of Engineering and Technology, Chengannur
+Bachelor of Technology in Computer Engineering, First Class
+2021–2025
+TECHNICAL SKILLS
+Programming & Data: Python, SQL, MySQL, Pandas, NumPy
+Data Analysis & Visualization: Statistical Analysis, Data Cleaning, Power BI, Tableau, Matplotlib, Seaborn, Plotly
+Machine Learning: Predictive Modeling, Scikit-learn, XGBoost, NLP, TF-IDF
+Tools: Jupyter Notebook, Git, GitHub, Streamlit
+EXPERIENCE
+Spectrum Softech, Ernakulam
+Data Science Trainee
+Aug 2025–Jan 2026
+• Cleaned and preprocessed 500K+ records monthly, preparing structured datasets for accurate predictive model-
+ing and analysis.
+• Developed XGBoost predictive models for agricultural commodity price forecasting, achieving 92% prediction
+accuracy.
+• Analyzed market patterns and translated model outputs into insights supporting decisions that contributed to 15–
+20% profit margin improvements.
+Logix Space, Cochin
+Web Development Intern
+May 2023
+• Developed responsive web interfaces using HTML, CSS, and PHP while maintaining website functionality and
+performance.
+PROJECTS
+Job Matcher App — Python, Streamlit, NLP
+Sep 2026–Oct 2026
+• Built a resume-job matching application that analyzes skills, experience, education, certifications, and projects
+to identify relevant job opportunities.
+• Integrated career-page job discovery to identify matching roles and highlight missing skills and certifications for
+targeted resume improvement.
+• Implemented privacy-focused processing with uploaded resumes and generated data automatically deleted after
+60 minutes.
+Agricultural Commodity Price Prediction System — Python, XGBoost, Streamlit, Plotly
+• Built a predictive analytics platform processing 36M+ market records, using seasonal trends, price comparisons,
+and volatility metrics to support data-driven decisions.
+• Developed interactive visualizations to communicate analytical insights and model results to non-technical users.
+Resume Parsing System — Streamlit, Scikit-learn, spaCy, Logistic Regression
+• Developed an ML-powered resume parser extracting candidate information and predicting candidate suitability with
+88% accuracy.
+• Optimized Pandas-based data processing, improving processing efficiency by 25%.
+CERTIFICATIONS
+Data Fundamentals — IBM — Deloitte Data Analytics Job Simulation — Forage — Data Science and
+Analytics Certification — HP Life — SQL Analytics and BI — Databricks
+ADDITIONAL
+NSS Student Volunteer — Jul 2019–Mar 2021 — Analytical Thinking — Problem Solving — Data Inter-
+pretation — Communication — Attention to Detail — Team Collaboration
+"""
+
+
+def _mk(title, desc, company="Co", days=1, loc="Kochi"):
+    return _job(title, company, desc, days) | {"location": loc}
+
+
+class ResumeReadingAccuracyTests(SimpleTestCase):
+    def setUp(self):
+        self.p = parser.parse_resume(ANALYST_CV)
+
+    def test_experience_is_seven_months(self):
+        self.assertEqual(self.p["experience_months"], 7)
+        self.assertEqual(self.p["experience_label"], "7 mo")
+
+    def test_titles(self):
+        self.assertEqual(self.p["primary_title"], "Entry-level Data Analyst")
+        self.assertEqual(self.p["latest_title"], "Data Science Trainee")
+
+    def test_certificates_are_split_and_additional_section_is_not_one(self):
+        self.assertEqual(self.p["certifications"], [
+            "Data Fundamentals \u2014 IBM", "Deloitte Data Analytics Job Simulation \u2014 Forage",
+            "Data Science and Analytics Certification \u2014 HP Life", "SQL Analytics and BI \u2014 Databricks"])
+        self.assertIn("additional", self.p["sections_found"])
+        self.assertFalse(any("NSS" in c or "ADDITIONAL" in c for c in self.p["certifications"]))
+
+    def test_skills_found(self):
+        flat = self.p["skills_flat"]
+        for s in ("Python", "SQL", "Power BI", "Tableau", "Pandas", "XGBoost", "Git", "Forecasting", "Attention to Detail", "Analytical Thinking"):
+            self.assertIn(s, flat)
+        self.assertNotIn("Finance & Accounting", self.p["skills"])      # forecasting is analytics, not finance
+
+    def test_hyphenated_line_ends_are_joined(self):
+        self.assertIn("predictive modeling", " ".join(self.p["experience"]))
+
+    def test_certification_splitter_variants(self):
+        self.assertEqual(parser.parse_certifications(["Google Data Analytics Certificate \u2014 Coursera \u2014 2023"]),
+                         ["Google Data Analytics Certificate \u2014 Coursera"])
+        self.assertEqual(parser.parse_certifications(["AWS Cloud Practitioner", "Python for Everybody - Coursera"]),
+                         ["AWS Cloud Practitioner", "Python for Everybody \u2014 Coursera"])
+
+
+class MatchingAccuracyTests(SimpleTestCase):
+    def setUp(self):
+        self.p = parser.parse_resume(ANALYST_CV)
+
+    def ev(self, title, desc):
+        return analysis.evaluate(self.p, _mk(title, desc))
+
+    def test_soft_skills_alone_never_make_a_match(self):
+        ev = self.ev("Forward Deployed Software Engineer", "Requirements: strong communication and problem solving. Nice to have: teamwork.")
+        self.assertFalse(analysis.is_relevant(ev))
+        self.assertLess(ev["score"], 70)
+
+    def test_unrelated_analyst_with_one_stray_keyword_is_not_relevant(self):
+        ev = self.ev("Microbiological Lab Analyst", "You will test samples in the laboratory. Python is a plus. Communication skills.")
+        self.assertFalse(analysis.is_relevant(ev))
+
+    def test_old_web_internship_does_not_pull_in_developer_jobs(self):
+        ev = self.ev("Dotnet Developer", "Requirements: C#, .NET, Angular, React, JavaScript, TypeScript, REST APIs, SQL.")
+        self.assertFalse(analysis.is_relevant(ev))
+
+    def test_title_only_job_in_the_candidates_field_is_kept_but_unrelated_titles_are_not(self):
+        self.assertTrue(analysis.is_relevant(self.ev("Data Analyst", "")))
+        self.assertFalse(analysis.is_relevant(self.ev("Dotnet Developer", "")))
+        self.assertFalse(analysis.is_relevant(self.ev("Microbiological Lab Analyst", "")))
+
+    def test_real_data_job_is_relevant_and_good(self):
+        ev = self.ev("Data Analyst", "Requirements: Python, SQL, Power BI, Tableau, data cleaning and statistical analysis.")
+        self.assertTrue(analysis.is_relevant(ev))
+        self.assertEqual(ev["verdict"], "eligible")
+        self.assertGreaterEqual(ev["core_matched"], 4)
+
+    def test_company_boilerplate_is_not_read_as_requirements(self):
+        desc = ("WHO WE ARE\nWe are a company with 12 years of experience in machine learning, Kubernetes and AWS.\n"
+                "We love building things together and have grown fast across many countries since our founding.\n\n"
+                "ABOUT THE ROLE\nYou will build weekly reports for the finance team and keep them accurate and on time.\n\n"
+                "REQUIREMENTS\nSQL and Excel. 1+ years of experience.\n\n"
+                "BENEFITS\nPython bootcamp budget, 30 years of experience of our founders.")
+        req = analysis.compute_requirements({"title": "Reporting Analyst", "description": desc})
+        self.assertIn("SQL", req["required"])
+        self.assertNotIn("Kubernetes", req["required"])
+        self.assertNotIn("Machine Learning", req["required"])
+        self.assertEqual(req["years"], 1)
+
+
+class ExperienceRulesTests(SimpleTestCase):
+    def setUp(self):
+        self.fresher = parser.parse_resume(ANALYST_CV)                         # 0.6 yr
+        self.senior = dict(self.fresher, years_experience=6.0, experience_months=72)
+
+    def test_5_plus_years_job_is_last_for_a_fresher_and_first_group_for_a_5_year_person(self):
+        jobs = [_mk("Data Analyst", "Python, SQL, Power BI, Tableau. 5+ years of experience.", days=1),
+                _mk("Data Analyst", "Python, SQL, Power BI, Tableau. 0-1 years.", "A", days=9),
+                _mk("Data Analyst II", "Python, SQL, Tableau.", "B", days=12)]
+        for parsed, expect_over in ((self.fresher, 1), (self.senior, 0)):
+            res = [analysis.evaluate(parsed, j) for j in jobs]
+            ordered = analysis.order_results(res, 40)
+            self.assertEqual(len(ordered), 3)                                   # never hidden
+            self.assertEqual(sum(1 for r in ordered if not r["exp_fit"]), expect_over)
+            if expect_over:
+                self.assertFalse(ordered[-1]["exp_fit"])                        # at the bottom
+                self.assertEqual(ordered[-1]["years_needed"], 5)
+
+    def test_fresher_job_fits_everyone_including_experienced(self):
+        job = _mk("Graduate Trainee - Data", "Python and SQL. 3 years of experience preferred. Freshers are welcome.")
+        for parsed in (self.fresher, self.senior):
+            ev = analysis.evaluate(parsed, job)
+            self.assertTrue(ev["fresher"] and ev["exp_fit"])
+        nojob = _mk("Data Analyst", "Python and SQL.")                          # states nothing -> open to all
+        self.assertTrue(analysis.evaluate(self.fresher, nojob)["exp_fit"])
+        self.assertTrue(analysis.evaluate(self.senior, nojob)["exp_fit"])
+
+    def test_seniority_in_title_implies_years(self):
+        self.assertEqual(analysis.implied_years("Senior Data Analyst"), 4)
+        self.assertEqual(analysis.implied_years("Staff Data Scientist"), 7)
+        self.assertEqual(analysis.implied_years("Data Analyst"), 0)
+        req = analysis.compute_requirements({"title": "Senior Data Analyst", "description": "Python and SQL."})
+        self.assertEqual((req["years"], req["years_src"]), (4, "title"))
+        stated = analysis.compute_requirements({"title": "Senior Data Analyst", "description": "Python. 2+ years of experience."})
+        self.assertEqual((stated["years"], stated["years_src"]), (2, "stated"))
+
+    def test_fit_tolerance_for_rounded_years(self):
+        job = _mk("Data Analyst", "Python and SQL. 7 months experience.")
+        self.assertTrue(analysis.evaluate(self.fresher, job)["exp_fit"])
+        job1 = _mk("Data Analyst", "Python and SQL. 1+ years of experience.")
+        self.assertFalse(analysis.evaluate(self.fresher, job1)["exp_fit"])      # 1 yr asked, 0.6 shown
+
+
+class SkillSearchTests(TestCase):
+    def test_parse_query(self):
+        self.assertEqual(analysis.parse_skill_query("python, SQL and power bi; CI/CD & Looker, cobol"),
+                         (["Python", "SQL", "Power BI", "CI/CD", "Looker"], ["cobol"]))
+        self.assertEqual(analysis.parse_skill_query("  ,, "), ([], []))
+
+    def _search(self, parsed, query):
+        jobs = [_mk("Reporting Specialist", "Requirements: SQL, Power BI and Excel.", "A", 3),
+                _mk("Data Analyst", "Requirements: Python, SQL, Power BI.", "B", 6),
+                _mk("Pastry Chef", "Cook.", "C", 0),
+                _mk("Senior BI Developer", "Power BI and SQL. 6+ years of experience.", "D", 1)]
+        with mock.patch("matcher.services.jobs.fetch_all", return_value=(jobs, [], 1)), \
+             mock.patch.object(analysis, "fetch_park_jobs", return_value=([], [], 0)):
+            return analysis.search_by_skills(parsed, query)
+
+    def test_finds_by_skills_regardless_of_title_and_ranks_by_matches(self):
+        res, stats = self._search(parser.parse_resume(ANALYST_CV), "Power BI, SQL, Python")
+        titles = [r["title"] for r in res]
+        self.assertNotIn("Pastry Chef", titles)
+        self.assertEqual(titles[0], "Data Analyst")                              # 3 of 3 skills
+        self.assertEqual(titles[-1], "Senior BI Developer")                      # asks 6+ years -> last for a 0.6 yr resume
+        self.assertEqual(stats["matched"], 3)
+        self.assertEqual(res[0]["query_matched"], ["Power BI", "SQL", "Python"])   # in the order typed
+
+    def test_keyword_outside_dictionary_is_searched_in_text(self):
+        jobs = [_mk("Analyst", "We use Snowpark daily.", "A"), _mk("Clerk", "Filing.", "B")]
+        with mock.patch("matcher.services.jobs.fetch_all", return_value=(jobs, [], 1)), \
+             mock.patch.object(analysis, "fetch_park_jobs", return_value=([], [], 0)):
+            res, _ = analysis.search_by_skills(parser.parse_resume(ANALYST_CV), "snowpark")
+        self.assertEqual([r["title"] for r in res], ["Analyst"])
+
+    def test_view_is_owner_only_and_results_are_tailorable(self):
+        self.client.post(reverse("upload"), {"resume": SimpleUploadedFile("cv.txt", ANALYST_CV.encode())})
+        resume = Resume.objects.get()
+        jobs = [_mk("Data Analyst", "Requirements: Python, SQL, Power BI.", "B", 6)]
+        with mock.patch("matcher.services.jobs.fetch_all", return_value=(jobs, [], 1)), \
+             mock.patch.object(analysis, "fetch_park_jobs", return_value=([], [], 0)):
+            r = self.client.get(reverse("skills", args=[resume.pk]), {"skills": "python, sql"})
+            self.assertContains(r, "Data Analyst")
+            self.assertContains(r, "Matches 2 of 2 skills")
+            stranger = self.client_class()
+            self.assertEqual(stranger.get(reverse("skills", args=[resume.pk]), {"skills": "python"}).status_code, 404)
+        resume.refresh_from_db()
+        key = resume.analysis["skill_results"][0]["key"]
+        self.assertIsNotNone(__import__("matcher.views", fromlist=["_find_result"])._find_result(resume, key))
+        self.assertEqual(self.client.get(reverse("skills", args=[resume.pk])).status_code, 200)   # empty query page
+
+
+@override_settings(RESUME_SYNC_SEARCH=True)
+class ResultsPageFlowTests(TestCase):
+    def test_results_page_orders_by_experience_fit_and_marks_fresher_jobs(self):
+        self.client.post(reverse("upload"), {"resume": SimpleUploadedFile("cv.txt", ANALYST_CV.encode())})
+        resume = Resume.objects.get()
+        jobs = [_mk("Data Analyst", "Python, SQL, Power BI, Tableau. 5+ years of experience.", "FiveYrCo", 1),
+                _mk("Data Analyst Trainee", "Python, SQL, Power BI. Freshers are welcome to apply.", "FresherCo", 8),
+                _mk("Data Analyst", "Python, SQL, Power BI, Tableau, data cleaning.", "OpenCo", 3)]
+        with mock.patch.object(analysis, "fetch_all", return_value=(jobs, [], 3)), \
+             mock.patch.object(analysis, "fetch_park_jobs", return_value=([], [], 0)):
+            self.client.post(reverse("search", args=[resume.pk]))
+        html = self.client.get(reverse("results", args=[resume.pk])).content.decode()
+        self.assertIn("Needs more experience", html)                       # the divider
+        self.assertIn("Open to freshers", html)
+        self.assertLess(html.index("OpenCo"), html.index("FiveYrCo"))     # fits first ...
+        self.assertLess(html.index("FresherCo"), html.index("FiveYrCo"))   # ... the 5+ years job is last
+        self.assertIn('data-fit="0"', html)
+        self.assertIn('data-fit="1"', html)
+        self.assertIn("Search by skills", html)
