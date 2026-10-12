@@ -1144,54 +1144,6 @@ class ExperienceRulesTests(SimpleTestCase):
         self.assertFalse(analysis.evaluate(self.fresher, job1)["exp_fit"])      # 1 yr asked, 0.6 shown
 
 
-class SkillSearchTests(TestCase):
-    def test_parse_query(self):
-        self.assertEqual(analysis.parse_skill_query("python, SQL and power bi; CI/CD & Looker, cobol"),
-                         (["Python", "SQL", "Power BI", "CI/CD", "Looker"], ["cobol"]))
-        self.assertEqual(analysis.parse_skill_query("  ,, "), ([], []))
-
-    def _search(self, parsed, query):
-        jobs = [_mk("Reporting Specialist", "Requirements: SQL, Power BI and Excel.", "A", 3),
-                _mk("Data Analyst", "Requirements: Python, SQL, Power BI.", "B", 6),
-                _mk("Pastry Chef", "Cook.", "C", 0),
-                _mk("Senior BI Developer", "Power BI and SQL. 6+ years of experience.", "D", 1)]
-        with mock.patch("matcher.services.jobs.fetch_all", return_value=(jobs, [], 1)), \
-             mock.patch.object(analysis, "fetch_park_jobs", return_value=([], [], 0)):
-            return analysis.search_by_skills(parsed, query)
-
-    def test_finds_by_skills_regardless_of_title_and_ranks_by_matches(self):
-        res, stats = self._search(parser.parse_resume(ANALYST_CV), "Power BI, SQL, Python")
-        titles = [r["title"] for r in res]
-        self.assertNotIn("Pastry Chef", titles)
-        self.assertEqual(titles[0], "Data Analyst")                              # 3 of 3 skills
-        self.assertEqual(titles[-1], "Senior BI Developer")                      # asks 6+ years -> last for a 0.6 yr resume
-        self.assertEqual(stats["matched"], 3)
-        self.assertEqual(res[0]["query_matched"], ["Power BI", "SQL", "Python"])   # in the order typed
-
-    def test_keyword_outside_dictionary_is_searched_in_text(self):
-        jobs = [_mk("Analyst", "We use Snowpark daily.", "A"), _mk("Clerk", "Filing.", "B")]
-        with mock.patch("matcher.services.jobs.fetch_all", return_value=(jobs, [], 1)), \
-             mock.patch.object(analysis, "fetch_park_jobs", return_value=([], [], 0)):
-            res, _ = analysis.search_by_skills(parser.parse_resume(ANALYST_CV), "snowpark")
-        self.assertEqual([r["title"] for r in res], ["Analyst"])
-
-    def test_view_is_owner_only_and_results_are_tailorable(self):
-        self.client.post(reverse("upload"), {"resume": SimpleUploadedFile("cv.txt", ANALYST_CV.encode())})
-        resume = Resume.objects.get()
-        jobs = [_mk("Data Analyst", "Requirements: Python, SQL, Power BI.", "B", 6)]
-        with mock.patch("matcher.services.jobs.fetch_all", return_value=(jobs, [], 1)), \
-             mock.patch.object(analysis, "fetch_park_jobs", return_value=([], [], 0)):
-            r = self.client.get(reverse("skills", args=[resume.pk]), {"skills": "python, sql"})
-            self.assertContains(r, "Data Analyst")
-            self.assertContains(r, "Matches 2 of 2 skills")
-            stranger = self.client_class()
-            self.assertEqual(stranger.get(reverse("skills", args=[resume.pk]), {"skills": "python"}).status_code, 404)
-        resume.refresh_from_db()
-        key = resume.analysis["skill_results"][0]["key"]
-        self.assertIsNotNone(__import__("matcher.views", fromlist=["_find_result"])._find_result(resume, key))
-        self.assertEqual(self.client.get(reverse("skills", args=[resume.pk])).status_code, 200)   # empty query page
-
-
 @override_settings(RESUME_SYNC_SEARCH=True)
 class ResultsPageFlowTests(TestCase):
     def test_results_page_orders_by_experience_fit_and_marks_fresher_jobs(self):
@@ -1210,4 +1162,83 @@ class ResultsPageFlowTests(TestCase):
         self.assertLess(html.index("FresherCo"), html.index("FiveYrCo"))   # ... the 5+ years job is last
         self.assertIn('data-fit="0"', html)
         self.assertIn('data-fit="1"', html)
-        self.assertIn("Search by skills", html)
+        self.assertNotIn("Search by skills", html)                         # no extra search box
+
+
+class YearsReadingTests(SimpleTestCase):
+    def test_phrasings_that_state_experience(self):
+        cases = [("- 12+ years in B2B marketing, with real ownership", 12), ("- 7-9 years building B2B SaaS products", 7),
+                 ("Two years or more experience working in IT support", 2), ("At least three years of previous administrative experience", 3),
+                 ("At least one year of previous industry experience", 1), ("- 5+ years PQE gained at a law firm", 5),
+                 ("You've spent 7-9 years building B2B SaaS products", 7), ("3+ years of experience in Python", 3),
+                 ("Minimum of 5 years", 5), ("6 months experience", 0.5)]
+        for text, expected in cases:
+            self.assertAlmostEqual(analysis.required_years(text), expected, delta=0.1, msg=text)
+
+    def test_benefits_and_company_facts_are_not_requirements(self):
+        for text in ("- Paid month off after 4 years & every 2 years thereafter", "for a maximum duration of 2 years unless requested",
+                     "Seven years voted Which? Recommended Provider", "sit two-to-three years out"):
+            self.assertEqual(analysis.required_years(text), 0, text)
+
+
+class GreenhouseFullTextTests(SimpleTestCase):
+    """The scraper asks Greenhouse for ?content=true so EVERY job has text (and therefore years + skills)."""
+
+    class _Resp:
+        def __init__(self, data): self._d = data
+        def raise_for_status(self): pass
+        def json(self): return self._d
+
+    class _Client:
+        def __init__(self, data): self.data, self.params = data, None
+        def get(self, url, params=None):
+            self.params = params
+            return GreenhouseFullTextTests._Resp(self.data)
+
+    DATA = {"jobs": [{"id": 1, "title": "Data Analyst", "absolute_url": "https://x.test/1", "location": {"name": "Kochi"},
+                      "first_published": "2026-10-01T00:00:00Z",
+                      "content": "&lt;p&gt;You have 2+ years of experience with SQL.&lt;/p&gt;"}]}
+
+    def test_full_text_mode_has_description_and_no_detail_pointer(self):
+        from matcher.services import jobs as jobs_mod
+        with override_settings(JOB_FETCH_CONTENT=True):
+            client = self._Client(self.DATA)
+            job = next(jobs_mod._greenhouse({"name": "Co", "token": "co"}, client))
+        self.assertEqual(client.params, {"content": "true"})
+        self.assertIn("2+ years of experience", job["description"])
+        self.assertIsNone(job["detail"])
+
+    def test_normal_mode_stays_light(self):
+        from matcher.services import jobs as jobs_mod
+        with override_settings(JOB_FETCH_CONTENT=False):
+            client = self._Client(self.DATA)
+            job = next(jobs_mod._greenhouse({"name": "Co", "token": "co"}, client))
+        self.assertIsNone(client.params)
+        self.assertEqual(job["description"], "")
+        self.assertEqual(job["detail"]["id"], 1)
+
+
+class SnapshotCoverageTests(SimpleTestCase):
+    def test_export_keeps_requirements_from_full_text_but_stores_short_description(self):
+        from django.core.management.base import CommandError  # noqa: F401
+        from matcher.services import park_sources, snapshot
+        long_text = "About the role. " + ("filler " * 400) + "\nRequirements\n3+ years of experience. SQL and Python."
+        job = {"company": "C", "title": "Data Analyst", "url": "https://x.test/9", "location": "Kochi",
+               "posted": "2026-10-01T00:00:00+00:00", "description": long_text, "detail": None}
+        out = StringIO()
+        with tempfile.TemporaryDirectory() as d:
+            f = _Path(d) / "s.json.gz"
+            with override_settings(JOB_SNAPSHOT_FILE=f), \
+                 mock.patch("matcher.services.jobs.fetch_all", return_value=([dict(job)], [], 1)), \
+                 mock.patch("matcher.services.jobs.fetch_details"), \
+                 mock.patch.object(park_sources, "fetch_park_report", return_value=([], {"ok": False, "jobs": 0, "notes": [], "name": "P", "park": "p"})):
+                call_command("update_snapshot", stdout=out)
+            snapshot._mem["mtime"] = None
+            with override_settings(JOB_SNAPSHOT_FILE=f):
+                saved = snapshot.load()["jobs"][0]
+            snapshot._mem["mtime"] = None
+        self.assertLessEqual(len(saved["description"]), 1500)
+        self.assertEqual(saved["req"]["years"], 3)                      # read from the full text, beyond the stored 1500 chars
+        self.assertIn("SQL", saved["req"]["required"])
+        self.assertTrue(saved["enriched"])
+        self.assertIn("experience data: 1/1 jobs have full text", out.getvalue())
