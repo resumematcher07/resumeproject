@@ -26,8 +26,10 @@ YEARS_REQ = [
     re.compile(r"(?:minimum|min\.?|at least|no less than)\s+(?:of\s+)?" + _N + r"\s*\+?\s*" + _U, re.I),
     # a requirement bullet that simply starts with the years: "- 12+ years in B2B marketing", "7-9 years building ..."
     re.compile(r"(?m)^[\s\-\u2022*\u00b7>]*" + _N + _RANGE + _U +
-               r"\s+(?:of\s+)?(?:in|as|with|working|building|owning|managing|leading|designing|developing|delivering|"
-               r"using|hands[- ]on|professional|relevant|proven|industry|related|pqe|post[- ]qualif\w*)\b", re.I),
+               r"\s+(?:of\s+)?(?:in|as|with|[a-z]{3,}ing|hands[- ]on|professional|relevant|proven|industry|related|pqe|post[- ]qualif\w*)\b", re.I),
+    # structured fields: "Experience: 3+ years", "Exp: 2-4 yrs", "Experience Required - 3", "Experience (in years): 5"
+    re.compile(r"\b(?:experience|exp)\.?\s*(?:required|level|needed)?\s*(?:\(\s*(?:in\s+)?years?\s*\))?\s*[:\-\u2013]\s*" + _N +
+               r"\s*\+?\s*(?:(?:-|to|\u2013)\s*\d{1,2}(?:\.\d{1,2})?\s*\+?\s*)?(?P<u>years?|yrs?|months?|mos?)?\b", re.I),
     re.compile(r"\b" + _N + _RANGE + _U + r"\s+(?:pqe|post[- ]qualif\w*)", re.I),
     re.compile(r"\byou(?:'ve|\s+have)\s+(?:spent|worked|been|got|gained)\s+(?:over\s+|more than\s+|at least\s+)?" + _N + _RANGE + _U, re.I),
 ]
@@ -113,7 +115,9 @@ FRESHER_TITLE = re.compile(
 FRESHER_TEXT = re.compile(
     r"\bfreshers?\s+(?:are\s+|can\s+|may\s+)?(?:welcome|apply|encouraged|eligible)"
     r"|\b(?:no|zero)\s+(?:prior\s+|previous\s+|work\s+)?experience\s+(?:is\s+)?(?:required|needed|necessary)"
-    r"|\bentry[- ]level\b|\b0\s*(?:-|to|–)\s*1\s*years?\b", re.I)
+    r"|\bentry[- ]level\b|\b0\s*(?:-|to|–)\s*1\s*years?\b"
+    r"|\b(?:experience|exp)\.?\s*(?:required|level)?\s*[:\-–]\s*(?:fresher|freshers|nil|none|not required|no experience)\b"
+    r"|\bfreshers?\s*(?:/|,|or|and|&)\s*experienced\b", re.I)
 
 
 def is_fresher_friendly(title, description):
@@ -132,7 +136,7 @@ def required_years(text):
     for rx in YEARS_REQ:
         for m in rx.finditer(text):
             v = float(m.group("n"))
-            if m.group("u").lower().startswith("m"):
+            if (m.group("u") or "years").lower().startswith("m"):
                 v = v / 12
             v = round(v, 2)
             if 0 < v <= 25:
