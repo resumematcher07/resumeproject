@@ -23,6 +23,7 @@
       {% for s in j.missing_preferred %}<span class="chip warn">+ {{ s }}</span>{% endfor %}
     </div>
 
+    {% if j.keyword_hits %}<p class="note okay">🔑 Matches your resume keyword: <b>{{ j.keyword_hits|join:", " }}</b></p>{% endif %}
     {% if not j.has_text %}<p class="note">ℹ The text of this job page could not be read, so its experience requirement and skills are unknown. Open the job to check.</p>{% endif %}
     {% if j.fresher %}<p class="note okay">🌱 Open to freshers: no experience required. Anyone can apply.</p>
     {% elif j.years_gap %}<p class="note">⏱ {% if j.years_src == "title" %}Senior-level role, usually {{ j.years_needed|floatformat:"-1" }}+ years{% else %}Asks for {{ j.years_needed|floatformat:"-1" }}+ years{% endif %}; your resume shows about {{ j.years_have|floatformat:"-1" }}.{% if not j.exp_fit %} Listed at the bottom.{% endif %}</p>{% endif %}
