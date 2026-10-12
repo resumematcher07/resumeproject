@@ -27,6 +27,9 @@ YEARS_REQ = [
     # a requirement bullet that simply starts with the years: "- 12+ years in B2B marketing", "7-9 years building ..."
     re.compile(r"(?m)^[\s\-\u2022*\u00b7>]*" + _N + _RANGE + _U +
                r"\s+(?:of\s+)?(?:in|as|with|[a-z]{3,}ing|hands[- ]on|professional|relevant|proven|industry|related|pqe|post[- ]qualif\w*)\b", re.I),
+    # the same bullet read from text that was flattened into one line: the "+" (or a range) marks it as a requirement
+    re.compile(r"\b" + _N + r"\s*(?:\+|\s(?:-|to|\u2013)\s*\d{1,2}(?:\.\d{1,2})?\s*\+?)\s*" + _U +
+               r"\s+(?:of\s+)?(?:in|as|with|[a-z]{3,}ing|hands[- ]on|professional|relevant|proven|industry|related)\b", re.I),
     # structured fields: "Experience: 3+ years", "Exp: 2-4 yrs", "Experience Required - 3", "Experience (in years): 5"
     re.compile(r"\b(?:experience|exp)\.?\s*(?:required|level|needed)?\s*(?:\(\s*(?:in\s+)?years?\s*\))?\s*[:\-\u2013]\s*" + _N +
                r"\s*\+?\s*(?:(?:-|to|\u2013)\s*\d{1,2}(?:\.\d{1,2})?\s*\+?\s*)?(?P<u>years?|yrs?|months?|mos?)?\b", re.I),
@@ -284,6 +287,7 @@ def evaluate(parsed, job):
         "matched": matched_req + matched_pref,
         "missing_required": missing_req,
         "missing_preferred": missing_pref,
+        "has_text": bool(job.get("description")),
         "years_needed": yrs_need,
         "years_src": reqs.get("years_src", ""),
         "fresher": fresher,
