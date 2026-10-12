@@ -23,7 +23,6 @@
       {% for s in j.missing_preferred %}<span class="chip warn">+ {{ s }}</span>{% endfor %}
     </div>
 
-    {% if j.query_matched %}<p class="note qmatch">🔎 Matches {{ j.query_matched|length }} of {{ j.query_total }} skills you searched: <b>{{ j.query_matched|join:", " }}</b></p>{% endif %}
     {% if j.fresher %}<p class="note okay">🌱 Open to freshers: no experience required. Anyone can apply.</p>
     {% elif j.years_gap %}<p class="note">⏱ {% if j.years_src == "title" %}Senior-level role, usually {{ j.years_needed|floatformat:"-1" }}+ years{% else %}Asks for {{ j.years_needed|floatformat:"-1" }}+ years{% endif %}; your resume shows about {{ j.years_have|floatformat:"-1" }}.{% if not j.exp_fit %} Listed at the bottom.{% endif %}</p>{% endif %}
 
