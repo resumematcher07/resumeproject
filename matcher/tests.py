@@ -1341,3 +1341,46 @@ class FlattenedTextTests(SimpleTestCase):
         html = render_to_string("matcher/_job_card.html", {"j": dict(ev, hubs=[], sources=[], job_functions=[], job_industries=[],
                                                                        company_industries=[], missing_certs=[]), "resume": mock.Mock(pk="00000000-0000-0000-0000-000000000000")})
         self.assertIn("could not be read", html)
+
+
+class ResumeKeywordTests(SimpleTestCase):
+    """The field word of the resume ('data') decides which job titles appear: Data Science, Data Intern, Data Engineer ..."""
+
+    def setUp(self):
+        self.p = parser.parse_resume(ANALYST_CV)
+
+    def test_focus_words(self):
+        self.assertEqual(set(analysis.focus_words(self.p)), {"data"})
+        for title, expected in (("Python Developer", {"python"}), ("Digital Marketing Executive", {"marketing"}),
+                                ("Machine Learning Engineer", {"machinelearning"}), ("Business Analyst", set()),
+                                ("Full Stack Developer", {"fullstack"})):
+            self.assertEqual(set(analysis._focus_for(title)), expected, title)
+
+    def test_every_title_with_the_word_data_is_shown_even_without_a_description(self):
+        for title in ("Data Intern", "Data Science Intern", "Data Engineer", "Senior Data Engineer", "Data Architect",
+                      "Data Scientist", "Software Engineer - Data Platform", "Data Entry Analyst"):
+            ev = analysis.evaluate(self.p, _mk(title, ""))
+            self.assertTrue(analysis.is_relevant(ev), title)
+            self.assertEqual(ev["keyword_hits"], ["data"], title)
+
+    def test_titles_without_the_word_are_not_added_by_the_keyword_rule(self):
+        for title in ("Business Development Manager", "Learning & Development Manager", "Pastry Chef", "Account Executive"):
+            ev = analysis.evaluate(self.p, _mk(title, ""))
+            self.assertFalse(ev["keyword_match"], title)
+            self.assertFalse(analysis.is_relevant(ev), title)
+
+    def test_strong_matches_come_before_weak_keyword_matches_even_if_older(self):
+        strong = analysis.evaluate(self.p, _mk("Data Analyst", "Python, SQL, Power BI, Tableau, data cleaning.", "A", days=20))
+        weak = analysis.evaluate(self.p, _mk("Data Engineer", "Spark, Kafka, Airflow, Scala.", "B", days=1))
+        ordered = analysis.order_results([weak, strong], 10)
+        self.assertEqual([r["company"] for r in ordered], ["A", "B"])
+        self.assertEqual(strong["verdict"], "eligible")
+
+    def test_card_shows_the_keyword(self):
+        from django.template.loader import render_to_string
+        ev = analysis.evaluate(self.p, _mk("Data Intern", "Python and SQL."))
+        html = render_to_string("matcher/_job_card.html", {"j": dict(ev, hubs=[], sources=[], job_functions=[], job_industries=[],
+                                                                       company_industries=[], missing_certs=[]),
+                                                           "resume": mock.Mock(pk="00000000-0000-0000-0000-000000000000")})
+        self.assertIn("Matches your resume keyword", html)
+        self.assertIn("data", html)
