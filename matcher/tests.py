@@ -1384,3 +1384,23 @@ class ResumeKeywordTests(SimpleTestCase):
                                                            "resume": mock.Mock(pk="00000000-0000-0000-0000-000000000000")})
         self.assertIn("Matches your resume keyword", html)
         self.assertIn("data", html)
+
+
+class ZeroJobSourcesTests(SimpleTestCase):
+    def test_log_lists_companies_that_returned_no_jobs(self):
+        from matcher.services import jobs as jobs_mod, park_sources, snapshot
+        companies = [{"name": "HasJobsCo", "ats": "greenhouse", "token": "a"}, {"name": "SilentCo", "ats": "jsonld", "url": "https://x.test/careers"}]
+        job = {"company": "HasJobsCo", "title": "Dev", "url": "https://x.test/1", "location": "", "posted": "", "description": "Python", "detail": None}
+        out = StringIO()
+        with tempfile.TemporaryDirectory() as d:
+            with override_settings(JOB_SNAPSHOT_FILE=_Path(d) / "s.json.gz"), \
+                 mock.patch("matcher.services.jobs.load_companies", return_value=companies), \
+                 mock.patch("matcher.services.jobs.fetch_all", return_value=([job], [], 2)), \
+                 mock.patch("matcher.services.jobs.fetch_details"), \
+                 mock.patch.object(park_sources, "fetch_park_report", return_value=([], {"ok": False, "jobs": 0, "notes": [], "name": "P", "park": "p"})):
+                call_command("update_snapshot", stdout=out)
+            snapshot._mem["mtime"] = None
+        text = out.getvalue()
+        self.assertIn("1 sources returned 0 jobs", text)
+        self.assertIn("SilentCo", text)
+        self.assertNotIn("HasJobsCo,", text)
