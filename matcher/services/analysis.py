@@ -1,4 +1,5 @@
 """Match a parsed resume against live jobs: relevance, newest-first ordering, gaps and verdicts."""
+import functools
 import hashlib
 import re
 from datetime import datetime, timezone
@@ -59,6 +60,7 @@ def _tokens(title):
     t = (title or "").lower()
     t = re.sub(r"\b(ui|ux)\s*[-/&+and]*\s*(ui|ux)\b", " ui ux ", t)               # UI/UX, UX-UI, UI & UX
     t = re.sub(r"(entry|mid)[- ]?level", " ", t)
+    t = re.sub(r"machine[- ]learning", "machinelearning", t)                          # one word, not "machine" + "learning"
     t = re.sub(r"\b(front|back|full)[- ]?(end|stack)\b", lambda m: m.group(1) + m.group(2), t)
     toks = re.findall(r"[a-z][a-z+#.]*", t)
     toks = [DESIGN_ALIASES.get(SYNONYMS.get(x, x), SYNONYMS.get(x, x)) for x in toks]
@@ -99,6 +101,25 @@ def _title_best(weighted_titles, job_title):
         elif score == best and (real_overlap or real_family):
             domain = True
     return round(min(1.0, best * 1.15), 3), domain
+
+
+# Words that appear in many titles without naming a field.
+FOCUS_STOP = {"full", "part", "time", "remote", "hybrid", "contract", "team", "global", "new", "the", "and", "for", "with", "all", "temporary",
+              "us", "uk", "eu", "in", "of", "at", "to",
+              # too broad to say anything about the field on their own ("Business Development", "Digital Transformation")
+              "business", "digital", "technical", "technology", "information", "general", "online", "customer", "associate"}
+
+
+@functools.lru_cache(maxsize=512)
+def _focus_for(title):
+    return frozenset(w for w in _tokens(title) if w not in GENERIC_ROLE and w not in FOCUS_STOP and len(w) > 1)
+
+
+def focus_words(parsed):
+    """The field word(s) of the role the resume aims for: 'Entry-level Data Analyst' -> {'data'}, 'Python Developer' -> {'python'}.
+    Any job whose title contains one of them is shown (Data Science, Data Intern, Data Engineer, ...)."""
+    main = parsed.get("primary_title") or parsed.get("latest_title") or next(iter(parsed.get("titles") or []), "")
+    return _focus_for(main)
 
 
 def title_score(candidate_titles, job_title):
@@ -248,6 +269,9 @@ def evaluate(parsed, job):
     missing_core = [s for s in missing_req if skill_weight(s) > 0]
 
     t_score, domain = title_match(parsed, job["title"])
+    keyword_hits = sorted(focus_words(parsed) & _tokens(job["title"]))
+    if keyword_hits:                                         # the job title contains the resume's field word ("data")
+        t_score, domain = max(t_score, 0.6), True
     yrs_need, yrs_have = reqs["years"], parsed.get("years_experience", 0)
     fresher = bool(reqs.get("fresher"))
     exp_fit = fresher or not yrs_need or yrs_need <= yrs_have + 0.05       # fresher / no experience asked: open to everyone
@@ -281,6 +305,8 @@ def evaluate(parsed, job):
         "verdict_label": label,
         "title_score": round(t_score * 100),
         "domain_match": domain,
+        "keyword_hits": keyword_hits,
+        "keyword_match": bool(keyword_hits),
         "skill_score": round(skill_part * 100),
         "skill_known": skill_known,
         "core_matched": len(core_matched),
@@ -303,6 +329,8 @@ def evaluate(parsed, job):
 def is_relevant(ev):
     """Why a posting is worth showing: its title fits the candidate's field AND real technical skills back it up,
     or its technical skills clearly fit on their own. One stray keyword ("Python" in a security-analyst post) is not enough."""
+    if ev["keyword_match"]:
+        return True                                          # e.g. "Data Intern", "Data Science", "Data Engineer" for a Data Analyst resume
     core = ev["core_matched"]
     skills_ok = ev["skill_score"] >= 20 or not ev["skill_known"]
     if not ev["skill_known"] and ev["title_score"] >= 50 and ev["domain_match"]:
@@ -318,11 +346,15 @@ OVER_EXPERIENCE_SHOWN = 15          # jobs asking for more years than the resume
 
 
 def order_results(results, limit):
-    """Jobs the candidate's experience fits come first (newest, then best match); jobs that ask for more years than the resume
-    shows - for example a '5+ years' role for a fresher - are not hidden but listed last."""
-    key = lambda r: (_posted_key(r), r["score"])
-    fit = sorted((r for r in results if r["exp_fit"]), key=key, reverse=True)
-    over = sorted((r for r in results if not r["exp_fit"]), key=key, reverse=True)
+    """Jobs the candidate's experience fits come first; jobs that ask for more years than the resume shows - for example a
+    '5+ years' role for a fresher - are not hidden but listed last. Inside each group: strong matches, then close ones, then
+    the rest; newest first within each of these."""
+    tier = {"eligible": 0, "certs": 0, "partial": 1}
+    def arrange(rows):
+        rows = sorted(rows, key=lambda r: (_posted_key(r), r["score"]), reverse=True)      # newest first, then best score
+        return sorted(rows, key=lambda r: tier.get(r["verdict"], 2))                      # stable: keeps that order inside a tier
+    fit = arrange([r for r in results if r["exp_fit"]])
+    over = arrange([r for r in results if not r["exp_fit"]])
     return fit[:limit] + over[:OVER_EXPERIENCE_SHOWN]
 
 
@@ -333,7 +365,7 @@ def _posted_key(r):
         return datetime.min.replace(tzinfo=timezone.utc)
 
 
-def search_and_rank(parsed, limit=40, companies=None, progress=None, hubs=None, job_functions=None, industries=None):
+def search_and_rank(parsed, limit=60, companies=None, progress=None, hubs=None, job_functions=None, industries=None):
     """Return (results, stats). Results are relevant jobs, newest posted first.
 
     hubs: optional list of keys from hubs.HUBS. When given, (a) company-career-page jobs are kept only if their
