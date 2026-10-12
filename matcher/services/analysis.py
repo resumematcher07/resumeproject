@@ -19,11 +19,21 @@ SYNONYMS = {"developer": "engineer", "programmer": "engineer", "swe": "engineer"
 PREFERRED_MARK = re.compile(r"nice[\s-]to[\s-]have|preferred|bonus|good[\s-]to[\s-]have|a plus|\bplus\b|desirable", re.I)
 _N = r"(?<![\d.])(?P<n>\d{1,2}(?:\.\d{1,2})?)"            # 1, 12, 1.5  (never the "5" inside "1.5")
 _U = r"(?P<u>years?|yrs?|months?|mos?)\b"
+_RANGE = r"\s*\+?\s*(?:(?:-|to|\u2013)\s*\d{1,2}(?:\.\d{1,2})?\s*\+?\s*)?"
 YEARS_REQ = [
-    re.compile(_N + r"\s*\+?\s*(?:(?:-|to|\u2013)\s*\d{1,2}(?:\.\d{1,2})?\s*\+?\s*)?" + _U + r"[^.\n]{0,70}?experience", re.I),
+    re.compile(_N + _RANGE + _U + r"[^.\n]{0,70}?experience", re.I),
     re.compile(r"experience[^.\n]{0,50}?" + _N + r"\s*\+?\s*" + _U, re.I),
-    re.compile(r"minimum (?:of )?" + _N + r"\s*\+?\s*" + _U, re.I),
+    re.compile(r"(?:minimum|min\.?|at least|no less than)\s+(?:of\s+)?" + _N + r"\s*\+?\s*" + _U, re.I),
+    # a requirement bullet that simply starts with the years: "- 12+ years in B2B marketing", "7-9 years building ..."
+    re.compile(r"(?m)^[\s\-\u2022*\u00b7>]*" + _N + _RANGE + _U +
+               r"\s+(?:of\s+)?(?:in|as|with|working|building|owning|managing|leading|designing|developing|delivering|"
+               r"using|hands[- ]on|professional|relevant|proven|industry|related|pqe|post[- ]qualif\w*)\b", re.I),
+    re.compile(r"\b" + _N + _RANGE + _U + r"\s+(?:pqe|post[- ]qualif\w*)", re.I),
+    re.compile(r"\byou(?:'ve|\s+have)\s+(?:spent|worked|been|got|gained)\s+(?:over\s+|more than\s+|at least\s+)?" + _N + _RANGE + _U, re.I),
 ]
+_NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+                 "twelve": 12, "fifteen": 15}
+_WORD_YEARS = re.compile(r"\b(" + "|".join(_NUMBER_WORDS) + r")(?=\s*(?:\+|or more|and above)?\s*(?:years?|yrs?)\b)", re.I)
 
 
 # Role families: two titles in the same family are related even when no word is shared (UI/UX Designer ~ Graphic Designer).
@@ -118,6 +128,7 @@ def required_years(text):
     Understands "3 years", "1.5 years", "7 months" (= 0.58) and ranges like "1-2 years" (the lower number counts).
     Whole numbers come back as int, others rounded to 2 decimals.
     """
+    text = _WORD_YEARS.sub(lambda m: str(_NUMBER_WORDS[m.group(1).lower()]), text or "")     # "Two years" -> "2 years"
     for rx in YEARS_REQ:
         for m in rx.finditer(text):
             v = float(m.group("n"))
@@ -413,73 +424,3 @@ def search_and_rank(parsed, limit=40, companies=None, progress=None, hubs=None, 
         "park_reports": park_reports_for(hubs or list(PARK_SOURCES)), "park_jobs": n_park_jobs,
         "job_functions": job_functions, "industries": industries,
     }
-
-
-# ---------------------------------------------------------------- search by skills
-
-def parse_skill_query(query):
-    """'python, SQL and power bi' -> (['Python', 'SQL', 'Power BI'], []). Words that are not in the skill dictionary
-    (a tool, a domain word) are kept as plain keywords and searched in the posting text."""
-    skills, keywords = [], []
-    for part in re.split(r"[,;\n|]+|\s+and\s+|\s+&\s+", query or "", flags=re.I):
-        part = part.strip(" .")
-        if len(part) < 2:
-            continue
-        found = flat_skills(find_skills(part))
-        if found:
-            skills.extend(s for s in found if s not in skills)
-        elif part.lower() not in keywords:
-            keywords.append(part.lower())
-    return skills[:12], keywords[:8]
-
-
-def search_by_skills(parsed, query, limit=60):
-    """Jobs that ask for the typed skills - whatever their title is. Ranked by how many of the typed skills they need.
-    Experience works as everywhere else: jobs that fit the resume first, jobs asking for more years last."""
-    from .jobs import fetch_all as _fetch_all
-    skills, keywords = parse_skill_query(query)
-    total = len(skills) + len(keywords)
-    stats = {"skills": skills, "keywords": keywords, "matched": 0, "jobs_scanned": 0, "over_experience": 0}
-    if not total:
-        return [], stats
-
-    jobs, _errors, _n = _fetch_all(None)
-    park_jobs, _pe, _pc = fetch_park_jobs(list(PARK_SOURCES))
-    jobs = dedupe(jobs + park_jobs)
-    stats["jobs_scanned"] = len(jobs)
-    wanted_lc = [s.lower() for s in skills]
-
-    results = []
-    for job in jobs:
-        req = job.get("req") or (compute_requirements(job) if job.get("description") else None)
-        title_lc = job["title"].lower()
-        if req:
-            job_skills = set(req["required"]) | set(req["preferred"])
-            hit_skills = [s for s in skills if s in job_skills or s.lower() in title_lc]
-        else:                                                    # title only (live mode, description not downloaded)
-            hit_skills = [s for s, lc in zip(skills, wanted_lc) if lc in title_lc]
-        text_lc = None
-        hit_keywords = []
-        for k in keywords:
-            if text_lc is None:
-                text_lc = f"{title_lc}\n{(job.get('description') or '').lower()}"
-            if k in text_lc:
-                hit_keywords.append(k)
-        hits = hit_skills + hit_keywords
-        if not hits:
-            continue
-        ev = evaluate(parsed, enrich_job(job))
-        ev["query_matched"] = hits
-        ev["query_total"] = total
-        ev["sources"] = job.get("sources", [])
-        results.append(ev)
-
-    stats["matched"] = len(results)
-    results.sort(key=_posted_key, reverse=True)                  # newest first ...
-    results.sort(key=lambda r: r["score"], reverse=True)         # ... then best match ...
-    results.sort(key=lambda r: len(r["query_matched"]), reverse=True)   # ... but most typed skills first
-    fit = [r for r in results if r["exp_fit"]]
-    over = [r for r in results if not r["exp_fit"]]
-    out = fit[:limit] + over[:OVER_EXPERIENCE_SHOWN]
-    stats["over_experience"] = len(over[:OVER_EXPERIENCE_SHOWN])
-    return out, stats
