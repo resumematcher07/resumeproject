@@ -13,11 +13,6 @@
     {% if stats.unreachable %}<details class="inline"><summary>{{ stats.unreachable|length }} site{{ stats.unreachable|length|pluralize }} unreachable</summary></details>{% endif %}</p>
 </section>
 
-<form class="skillsearch" method="get" action="{% url 'skills' resume.pk %}">
-  <input type="text" name="skills" maxlength="300" placeholder="Search jobs by skills, e.g. Python, SQL, Power BI" aria-label="Skills">
-  <button class="btn primary sm" type="submit">🔎 Search by skills</button>
-  {% if top_skills %}<a class="btn soft sm" href="{% url 'skills' resume.pk %}?skills={{ top_skills|join:',' }}">Use my skills</a>{% endif %}
-</form>
 
 <!-- {{ stats.unreachable|join:" · " }} -->
 <!-- {% if stats.park_reports %}
