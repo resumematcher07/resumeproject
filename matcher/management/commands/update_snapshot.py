@@ -10,7 +10,9 @@ import time
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
+from matcher.services import analysis
 from matcher.services import jobs as jobs_mod
+from matcher.services.catalog import enrich_job
 from matcher.services import park_sources, snapshot
 
 
@@ -19,15 +21,18 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--out", help="Output file (default: data/jobs_snapshot.json.gz)")
-        parser.add_argument("--deadline", type=int, default=300, help="Max seconds to wait for all career sites")
-        parser.add_argument("--detail-limit", type=int, default=2500,
-                            help="Max job descriptions to download for listings that only expose titles (newest first)")
-        parser.add_argument("--description-chars", type=int, default=8000, help="Trim each description to this many characters")
+        parser.add_argument("--deadline", type=int, default=600, help="Max seconds to wait for all career sites")
+        parser.add_argument("--detail-limit", type=int, default=100000,
+                            help="Max extra descriptions to download one by one for listings that still have no text (newest first)")
+        parser.add_argument("--description-chars", type=int, default=1500,
+                            help="Keep this many characters of each description in the file (requirements are computed from the FULL text first)")
         parser.add_argument("--force", action="store_true", help="Write even if far fewer jobs than the previous snapshot")
 
     def handle(self, *args, **o):
         settings.JOB_SOURCE = "live"                       # the scraper must really go online
         settings.JOB_SEARCH_DEADLINE = o["deadline"]
+        settings.JOB_FETCH_CONTENT = True                  # Greenhouse: full job text in the same request (no per-job downloads)
+        settings.JOB_FETCH_TIMEOUT = 40                    # the full-text lists are bigger than the title-only lists
         settings.PARK_RENDER = True                        # use headless Chromium for JavaScript-only park pages if installed
         t0 = time.time()
 
@@ -46,15 +51,38 @@ class Command(BaseCommand):
             parks[key] = {"jobs": pj, "report": report}
             self.stdout.write(f"    {key}: {len(pj)} jobs")
 
-        self.stdout.write("3/4 job descriptions ...")
+        self.stdout.write("3/4 job descriptions + skills ...")
         everything = all_jobs + [j for p in parks.values() for j in p["jobs"]]
         todo = [j for j in everything if j.get("detail") and not j.get("description")]
         todo.sort(key=lambda j: j.get("posted") or "", reverse=True)
         jobs_mod.fetch_details(todo[: o["detail_limit"]], workers=32)
         cap = o["description_chars"]
+        stats = {"with_text": 0, "years_stated": 0, "years_from_title": 0, "fresher": 0}
         for j in everything:
+            has_text = bool(j.get("description"))
+            req = analysis.compute_requirements(j)         # skills / years / fresher flag, read from the FULL text once, here
+            j["req"] = req
+            enrich_job(j)                                  # industries / job functions from the FULL text, then freeze them
+            j["enriched"] = True
+            stats["with_text"] += has_text
+            stats["years_stated"] += req["years_src"] == "stated"
+            stats["years_from_title"] += req["years_src"] == "title"
+            stats["fresher"] += bool(req["fresher"])
             j["description"] = (j.get("description") or "")[:cap]
             j.pop("detail", None)                          # snapshot jobs are complete; nothing left to fetch later
+        for key, p in parks.items():                       # per park: how many pages were readable, how many state years
+            pj = p["jobs"]
+            if pj:
+                readable = sum(1 for j in pj if (j.get("req") or {}).get("years_src") or j.get("description"))
+                stated = sum(1 for j in pj if (j.get("req") or {}).get("years_src") == "stated")
+                self.stdout.write(f"    {key}: {len(pj)} jobs, {readable} with readable page text, years stated in {stated}")
+        n = len(everything) or 1
+        self.stdout.write(f"    experience data: {stats['with_text']}/{len(everything)} jobs have full text ({100 * stats['with_text'] // n}%), "
+                          f"years stated in {stats['years_stated']}, implied by title in {stats['years_from_title']}, "
+                          f"fresher-friendly {stats['fresher']}")
+        if stats["with_text"] < 0.5 * len(everything):
+            self.stderr.write("WARNING: fewer than half of the jobs have a description - experience analysis will be weak. "
+                              "Check the log above for sources that failed.")
 
         # Safety: never replace a good snapshot with a broken one (e.g. GitHub was rate-limited / network down).
         out = o["out"] or snapshot.snapshot_path()
