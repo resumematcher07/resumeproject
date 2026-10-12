@@ -1242,3 +1242,73 @@ class SnapshotCoverageTests(SimpleTestCase):
         self.assertIn("SQL", saved["req"]["required"])
         self.assertTrue(saved["enriched"])
         self.assertIn("experience data: 1/1 jobs have full text", out.getvalue())
+
+
+class ParkJobPageTests(SimpleTestCase):
+    """Infopark job pages: the requirement 'REQUIREMENTS: 3+ years managing Meta Ads spend' must reach the analysis."""
+
+    PAGE = """<html><head><title>Meta Ads Specialist Jobs | Infoparks Kerala</title><script>var x=1;</script></head><body>
+    <div class="menu"><ul><li><a>Home</a></li><li><a>About</a></li><li><a>Companies@Infopark</a></li><li><a>Resources</a></li></ul></div>
+    <h1>Job Opportunities</h1><h2>Career Opportunities</h2><a>Back</a>
+    <h4>Mozilor Technologies Pvt. Ltd.</h4><div>careers@mozilor.com</div>
+    <h4>Meta Ads Specialist</h4>
+    <div>CookieYes sells to website owners and agencies. We are hiring a Meta Ads Specialist to own paid social.<br>
+    You will run Facebook and Instagram campaigns end to end.<br><br>
+    RESPONSIBILITIES<br>Own Meta paid acquisition end to end: strategy, budgets, bidding and daily optimisation.<br>
+    Own the measurement plan: pixel and Conversions API implementation.<br><br>
+    REQUIREMENTS<br>3+ years managing Meta Ads spend hands-on, with direct responsibility for a monthly budget you can quantify.<br>
+    Practical experience with Meta Pixel and Conversions API, including server-side setup.<br>
+    Analytical fluency in GA4 and spreadsheets, with an understanding of attribution windows.<br><br>
+    GOOD TO HAVE<br>Google Ads, LinkedIn Ads or Reddit Ads experience alongside Meta.</div>
+    <p>If this opportunity aligns with your career goals, kindly share your updated resume.</p>
+    <div><b>About Infopark</b><ul><li>Overview</li><li>Governing Body</li></ul><b>Contact Us</b>Infopark Park Centre, Kochi</div>
+    </body></html>"""
+
+    def test_page_text_keeps_lines_and_drops_menu_and_footer(self):
+        from matcher.services import jobs as jobs_mod
+        text = jobs_mod.park_page_text(self.PAGE, "Meta Ads Specialist")
+        self.assertTrue(text.startswith("Meta Ads Specialist"))
+        self.assertIn("\n3+ years managing Meta Ads spend", text)          # its own line
+        self.assertNotIn("Governing Body", text)                              # footer gone
+        self.assertNotIn("Companies@Infopark", text)                          # menu gone
+
+    def test_three_years_are_read_for_this_job(self):
+        from matcher.services import jobs as jobs_mod
+        text = jobs_mod.park_page_text(self.PAGE, "Meta Ads Specialist")
+        req = analysis.compute_requirements({"title": "Meta Ads Specialist", "description": text})
+        self.assertEqual((req["years"], req["years_src"]), (3, "stated"))
+        self.assertFalse(req["fresher"])
+        # a fresher resume sees it as needing more experience (listed last); a 4-year person fits
+        p = parser.parse_resume(ANALYST_CV)
+        job = {"title": "Meta Ads Specialist", "company": "Mozilor", "url": "https://infopark.in/jobs/x", "location": "Infopark, Kochi",
+               "posted": "", "description": text}
+        self.assertFalse(analysis.evaluate(p, job)["exp_fit"])
+        self.assertTrue(analysis.evaluate(dict(p, years_experience=4.0), job)["exp_fit"])
+
+    def test_fetch_detail_uses_the_job_title_to_cut_the_page(self):
+        from matcher.services import jobs as jobs_mod
+        class R:
+            text = self.PAGE
+            def raise_for_status(self): pass
+        class C:
+            def __enter__(s): return s
+            def __exit__(s, *a): return False
+            def get(s, url): return R()
+        job = {"title": "Meta Ads Specialist", "company": "Mozilor", "url": "https://infopark.in/jobs/x", "description": "",
+               "detail": {"park_source": "infopark", "url": "https://infopark.in/jobs/x"}}
+        with mock.patch("matcher.services.netutil.SafeClient", return_value=C()), \
+             mock.patch.object(jobs_mod.cache, "get", return_value=None), mock.patch.object(jobs_mod.cache, "set"):
+            out = jobs_mod.fetch_detail(job)
+        self.assertIn("\n3+ years managing", out["description"])
+
+
+class StructuredExperienceFieldTests(SimpleTestCase):
+    def test_portal_style_fields(self):
+        for text, expected in (("Experience: 3+ years", 3), ("Exp: 2-4 yrs", 2), ("Experience Required - 3", 3),
+                               ("Experience (in years): 5", 5), ("Experience: 2019", 0), ("5 years running campaigns", 5)):
+            self.assertEqual(analysis.required_years(text), expected, text)
+
+    def test_fresher_fields(self):
+        for text in ("Experience: Fresher", "Freshers and experienced candidates", "Exp - Nil", "Freshers / Experienced"):
+            self.assertTrue(analysis.is_fresher_friendly("Developer", text), text)
+        self.assertFalse(analysis.is_fresher_friendly("Developer", "Experience: 3 years"))
