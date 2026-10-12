@@ -15,7 +15,6 @@ from .models import GeneratedResume, Resume, purge_expired
 from pathlib import Path
 
 from .services import analysis, builder, hubs as hubs_mod, latex, parser
-from .services.skills_data import skill_weight
 
 ALLOWED_EXT = {"pdf", "docx", "txt", "md"}
 
@@ -129,33 +128,12 @@ def results(request, pk):
     return render(request, "matcher/results.html", {
         "resume": resume, "p": resume.parsed,
         "results": resume.analysis["results"], "stats": resume.analysis["stats"],
-        "top_skills": _top_skills(resume.parsed),
     })
 
 
-def _top_skills(parsed, n=6):
-    return [s for s in parsed.get("skills_flat", []) if skill_weight(s) >= 1][:n]
-
-
 def _find_result(resume, key):
-    """A job from the automatic search OR from a skills search (both are tailorable)."""
-    data = resume.analysis or {}
-    return next((r for r in data.get("results", []) + data.get("skill_results", []) if r["key"] == key), None)
-
-
-def skill_search(request, pk):
-    """Search jobs by typed skills, independent of the job title."""
-    resume = _get(request, pk)
-    query = request.GET.get("skills", "").strip()[:300]
-    results, stats = [], {}
-    if query:
-        results, stats = analysis.search_by_skills(resume.parsed, query)
-        data = dict(resume.analysis or {})
-        data["skill_results"] = results
-        Resume.objects.filter(pk=pk).update(analysis=data)
-    return render(request, "matcher/skills.html", {
-        "resume": resume, "p": resume.parsed, "query": query, "results": results, "stats": stats,
-        "top_skills": _top_skills(resume.parsed)})
+    """The matched job with this key, from the stored search results."""
+    return next((r for r in (resume.analysis or {}).get("results", []) if r["key"] == key), None)
 
 
 @require_POST
