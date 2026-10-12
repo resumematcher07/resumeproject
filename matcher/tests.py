@@ -1312,3 +1312,32 @@ class StructuredExperienceFieldTests(SimpleTestCase):
         for text in ("Experience: Fresher", "Freshers and experienced candidates", "Exp - Nil", "Freshers / Experienced"):
             self.assertTrue(analysis.is_fresher_friendly("Developer", text), text)
         self.assertFalse(analysis.is_fresher_friendly("Developer", "Experience: 3 years"))
+
+
+class FlattenedTextTests(SimpleTestCase):
+    """Text saved by the OLD scraper (whole page on one line) must still yield the experience requirement."""
+
+    LINES = ("REQUIREMENTS\n3+ years writing conversion-focused copy for a digital product across websites, landing pages, email or paid campaigns.\n"
+             "Strong understanding of core UX principles, user flows and interaction patterns.\n"
+             "Hands-on experience running A/B tests on copy.\nFamiliarity with a React-based front end like Next.js is a plus.")
+
+    def test_years_found_with_and_without_line_breaks(self):
+        for desc in ("About the role\nWe are hiring.\n" + self.LINES, "About the role We are hiring. " + " ".join(self.LINES.split())):
+            req = analysis.compute_requirements({"title": "UX Writer (Growth)", "description": desc})
+            self.assertEqual((req["years"], req["years_src"]), (3, "stated"), desc[:60])
+
+    def test_flattened_text_does_not_create_false_years(self):
+        flat = "Paid month off after 4 years & every 2 years thereafter. Our company has 10+ years of history in the market."
+        self.assertEqual(analysis.required_years(flat), 0)
+
+    def test_card_says_when_page_text_is_missing(self):
+        p = parser.parse_resume(ANALYST_CV)
+        job = {"title": "Data Analyst", "company": "Co", "url": "https://x.test/1", "location": "Kochi", "posted": "", "description": ""}
+        ev = analysis.evaluate(p, job)
+        self.assertFalse(ev["has_text"])
+        job["description"] = "Python and SQL."
+        self.assertTrue(analysis.evaluate(p, job)["has_text"])
+        from django.template.loader import render_to_string
+        html = render_to_string("matcher/_job_card.html", {"j": dict(ev, hubs=[], sources=[], job_functions=[], job_industries=[],
+                                                                       company_industries=[], missing_certs=[]), "resume": mock.Mock(pk="00000000-0000-0000-0000-000000000000")})
+        self.assertIn("could not be read", html)
