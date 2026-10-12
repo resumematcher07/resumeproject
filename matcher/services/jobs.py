@@ -169,17 +169,34 @@ def _jsonld(c, client):
 READERS = {"greenhouse": _greenhouse, "lever": _lever, "ashby": _ashby, "workable": _workable, "jsonld": _jsonld}
 
 
-def _park_detail_text(url):
-    """Official IT-park listing pages have no JSON API; read the visible text of the detail page."""
+_PAGE_END = re.compile(r"^(about (infopark|technopark|cyberpark|us)|quick links|infrastructure|contact us|related jobs|similar jobs|"
+                       r"share (this|on)|\u00a9|copyright)\b", re.I)
+
+
+def park_page_text(html_text, title=""):
+    """Visible text of an official park job page, ONE LINE PER ELEMENT (bullets such as '3+ years managing Meta Ads spend'
+    must stay on their own line to be read as a requirement), without the site menu and footer."""
     from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html_text, "html.parser")
+    for t in soup(["script", "style", "noscript", "nav", "footer", "header", "form", "svg"]):
+        t.decompose()
+    lines = [re.sub(r"[ \t]+", " ", l).strip() for l in soup.get_text("\n").splitlines()]
+    lines = [l for l in lines if l]
+    start = 0
+    if title:                                                     # the job starts at its own title, after the site menu
+        t = title.casefold().strip()
+        start = next((i for i, l in enumerate(lines) if l.casefold().strip() == t), 0)
+    end = next((i for i in range(start + 1, len(lines)) if _PAGE_END.match(lines[i])), len(lines))
+    return "\n".join(lines[start:end])[:15000]
+
+
+def _park_detail_text(url, title=""):
+    """Official IT-park listing pages have no JSON API; read the visible text of the detail page."""
     from .netutil import SafeClient
     with SafeClient(settings.JOB_FETCH_TIMEOUT, UA) as client:
         r = client.get(url)
         r.raise_for_status()
-        soup = BeautifulSoup(r.text, "html.parser")
-        for t in soup(["script", "style", "nav", "footer", "header"]):
-            t.decompose()
-        return re.sub(r"\s+", " ", soup.get_text(" ", strip=True))[:15000]
+        return park_page_text(r.text, title)
 
 
 def fetch_detail(job):
@@ -192,11 +209,11 @@ def fetch_detail(job):
         return job
     if "ats" not in d:                                          # official park listing (e.g. Infopark)
         url = d.get("url") or job.get("url")
-        key = f"parkdetail:{url}"
+        key = f"parkdetail2:{url}"
         text = cache.get(key)
         if text is None:
             try:
-                text = _park_detail_text(url) if url else ""
+                text = _park_detail_text(url, job.get("title", "")) if url else ""
                 cache.set(key, text, settings.JOB_CACHE_SECONDS * 4)
             except Exception as exc:
                 log.warning("park detail fetch failed: %s", exc)
