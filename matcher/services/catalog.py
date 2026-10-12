@@ -102,6 +102,8 @@ def industry_labels(keys):
 
 def enrich_job(job):
     """Attach company metadata and lightweight function/industry classification."""
+    if job.get("enriched"):                       # snapshot jobs were classified from the full text on GitHub; keep that
+        return job
     index = company_index()
     company = index.get(str(job.get("company", "")).casefold(), {})
     job["company_regions"] = company.get("regions", [])
