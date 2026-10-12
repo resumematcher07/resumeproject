@@ -14,7 +14,6 @@ urlpatterns = [
     path("resume/<uuid:pk>/editor/<int:gid>/", views.editor, name="editor"),
     path("resume/<uuid:pk>/editor/<int:gid>/compile/", views.editor_compile, name="editor_compile"),
     path("resume/<uuid:pk>/editor/<int:gid>/tex/", views.editor_tex, name="editor_tex"),
-    path("resume/<uuid:pk>/skills/", views.skill_search, name="skills"),
     path("resume/<uuid:pk>/ping/", views.ping, name="ping"),
     path("resume/<uuid:pk>/leave/", views.leave, name="leave"),
     path("resume/<uuid:pk>/delete/", views.delete, name="delete"),
