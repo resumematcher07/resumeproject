@@ -88,14 +88,19 @@ def dedupe(jobs):
 # ---------- per-ATS readers ----------
 
 def _greenhouse(c, client):
-    # The list WITHOUT content is tiny and fast; full text is fetched later only for relevant jobs.
-    r = client.get(f"https://boards-api.greenhouse.io/v1/boards/{c['token']}/jobs")
+    # Normal mode: the list WITHOUT content is tiny and fast; full text is fetched later only for relevant jobs.
+    # Scraper mode (JOB_FETCH_CONTENT, used by update_snapshot): ?content=true returns every job's FULL text in this ONE request,
+    # so every job has its requirements ("3+ years of experience", skills) without thousands of extra downloads.
+    with_content = bool(getattr(settings, "JOB_FETCH_CONTENT", False))
+    r = client.get(f"https://boards-api.greenhouse.io/v1/boards/{c['token']}/jobs",
+                   params={"content": "true"} if with_content else None)
     r.raise_for_status()
     for j in r.json().get("jobs", []):
+        text = strip_html(j.get("content")) if with_content else ""
         yield _job(c["name"], j.get("title"), j.get("absolute_url"),
                    (j.get("location") or {}).get("name"),
-                   _ts(j.get("first_published") or j.get("updated_at")), "",
-                   detail={"ats": "greenhouse", "token": c["token"], "id": j.get("id")})
+                   _ts(j.get("first_published") or j.get("updated_at")), text,
+                   detail=None if text else {"ats": "greenhouse", "token": c["token"], "id": j.get("id")})
 
 
 def _lever(c, client):
