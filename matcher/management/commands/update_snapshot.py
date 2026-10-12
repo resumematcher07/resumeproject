@@ -39,6 +39,13 @@ class Command(BaseCommand):
         self.stdout.write("1/4 career sites ...")
         all_jobs, errors, n_companies = jobs_mod.fetch_all(workers=48, refresh=True)
         self.stdout.write(f"    {len(all_jobs)} jobs from {n_companies} sources, {len(errors)} unreachable")
+        seen = {j["company"] for j in all_jobs}
+        try:
+            silent = [c["name"] for c in jobs_mod.load_companies() if c["name"] not in seen]
+        except Exception:
+            silent = []
+        if silent:                                         # reachable pages that gave 0 jobs: wrong ATS type, JavaScript-only page, or truly no openings
+            self.stdout.write(f"    {len(silent)} sources returned 0 jobs (check them): " + ", ".join(silent[:60]) + (" ..." if len(silent) > 60 else ""))
 
         self.stdout.write("2/4 official IT-park listings ...")
         parks = {}
