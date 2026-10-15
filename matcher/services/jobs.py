@@ -166,7 +166,10 @@ def _jsonld(c, client):
                        _ts(p.get("datePosted")), strip_html(p.get("description")))
 
 
-READERS = {"greenhouse": _greenhouse, "lever": _lever, "ashby": _ashby, "workable": _workable, "jsonld": _jsonld}
+from . import pages as _pages                                    # noqa: E402  (needs strip_html/_job defined above)
+
+READERS = {"greenhouse": _greenhouse, "lever": _lever, "ashby": _ashby, "workable": _workable, "jsonld": _jsonld,
+           "html": _pages._html, "eightfold": _pages._eightfold}
 
 
 _PAGE_END = re.compile(r"^(about (infopark|technopark|cyberpark|us)|quick links|infrastructure|contact us|related jobs|similar jobs|"
@@ -196,7 +199,7 @@ def _park_detail_text(url, title=""):
     with SafeClient(settings.JOB_FETCH_TIMEOUT, UA) as client:
         r = client.get(url)
         r.raise_for_status()
-        return park_page_text(r.text, title)
+        return _pages.ldjson_description(r.text) or park_page_text(r.text, title)
 
 
 def fetch_detail(job):
@@ -225,6 +228,11 @@ def fetch_detail(job):
     if text is None:
         try:
             with httpx.Client(timeout=settings.JOB_FETCH_TIMEOUT, headers=UA, follow_redirects=True) as client:
+                if d["ats"] == "eightfold":
+                    text = _pages.eightfold_detail(client, d["token"], d["id"], d.get("domain", ""))
+                    cache.set(key, text, settings.JOB_CACHE_SECONDS * 4)
+                    job["description"] = text
+                    return enrich_job(job)
                 r = client.get(f"https://boards-api.greenhouse.io/v1/boards/{d['token']}/jobs/{d['id']}")
                 r.raise_for_status()
                 text = strip_html(r.json().get("content"))[:15000]
@@ -256,7 +264,7 @@ def load_companies():
     out = []
     for c in data.get("companies", []):
         if c.get("ats") in READERS and c.get("name") and (c.get("token") or c.get("url")):
-            if c["ats"] == "jsonld" and urlparse(c["url"]).scheme not in ("http", "https"):
+            if c.get("url") and urlparse(c["url"]).scheme not in ("http", "https"):
                 continue
             out.append(c)
     return out
