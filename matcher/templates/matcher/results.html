@@ -27,13 +27,22 @@
 </section>
 {% endif %} -->
 
-<div class="filters" role="tablist">
+<div class="finder">
+  <div class="searchbar" role="search">
+    <svg class="s-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="jobSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search job title, company, skill or place…" aria-label="Search jobs by title, company or place">
+    <button type="button" id="searchClear" class="s-clear" aria-label="Clear search" hidden>✕</button>
+    <kbd class="s-key" aria-hidden="true">/</kbd>
+    <span class="s-count" id="searchCount" aria-live="polite"></span>
+  </div>
+  <div class="filters" role="tablist">
   <button class="pill active" data-filter="all">All</button>
   <button class="pill" data-filter="eligible">Strong match</button>
   <!-- <button class="pill" data-filter="certs">Needs certificate</button> -->
   <button class="pill" data-filter="partial">Close</button>
   <button class="pill" data-filter="ineligible">Not yet eligible</button>
   <button class="pill" data-filter="exp">Experience: {% if p.years_experience %}{{ p.years_experience|floatformat:"-1" }} yr{{ p.years_experience|pluralize:"" }}{% else %}fresher{% endif %}</button>
+</div>
 </div>
 
 {% for j in results %}
@@ -47,4 +56,9 @@
   <p class="muted">Nothing on the configured career pages matched your job title. Try again later, or add more companies in <code>companies.yaml</code>.</p>
 </div>
 {% endfor %}
+<div class="empty" id="noMatch" hidden>
+  <h3>No jobs match your search</h3>
+  <p class="muted">Try a different title, company or city, or clear the search / filter.</p>
+  <button type="button" class="btn soft sm" id="noMatchReset">Clear search</button>
+</div>
 {% endblock %}
