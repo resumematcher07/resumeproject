@@ -94,3 +94,143 @@ companies:
   - {name: Meta, ats: jsonld, url: https://www.metacareers.com/, regions: [north_america, europe, asia], industries: [internet_media, technology, ai_ml], job_functions: [engineering, data_ai, research, product, ui_ux_design, finance, business, sales, marketing, operations, legal, hr]}
   - {name: IBM, ats: jsonld, url: https://www.ibm.com/careers, regions: [north_america, europe, asia, middle_east, africa, australia], industries: [technology, ai_ml, consulting], job_functions: [engineering, data_ai, research, product, business, finance, sales, marketing, operations, hr]}
   - {name: Oracle, ats: jsonld, url: https://www.oracle.com/careers/, regions: [north_america, europe, asia, middle_east, africa, australia], industries: [technology, cloud], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, sales, marketing, operations]}
+  - {name: Adobe, ats: jsonld, url: https://www.adobe.com/careers.html, regions: [north_america, europe, asia, australia], industries: [technology], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, sales, marketing, operations]}
+  - {name: Workday, ats: jsonld, url: https://www.workday.com/en-us/company/careers.html, regions: [north_america, europe, asia, australia], industries: [technology, hr_tech], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, sales, marketing, operations, hr]}
+  - {name: Cisco, ats: jsonld, url: https://jobs.cisco.com/, regions: [north_america, europe, asia, middle_east, australia], industries: [technology, telecom, cybersecurity], job_functions: [engineering, data_ai, product, sales, marketing, finance, business, operations]}
+  - {name: Intel, ats: jsonld, url: https://jobs.intel.com/, regions: [north_america, europe, asia], industries: [semiconductor, technology], job_functions: [engineering, data_ai, research, product, finance, business, operations, sales]}
+  - {name: NVIDIA, ats: jsonld, url: https://www.nvidia.com/en-us/about-nvidia/careers/, regions: [north_america, europe, asia], industries: [semiconductor, ai_ml, technology], job_functions: [engineering, data_ai, research, product, finance, business, sales, operations]}
+  - {name: Qualcomm, ats: jsonld, url: https://www.qualcomm.com/company/careers, regions: [north_america, europe, asia], industries: [semiconductor, telecom], job_functions: [engineering, data_ai, research, product, finance, business, operations]}
+  - {name: Dell Technologies, ats: jsonld, url: https://jobs.dell.com/, regions: [north_america, europe, asia, middle_east], industries: [technology], job_functions: [engineering, data_ai, product, sales, finance, business, operations, marketing]}
+  - {name: Siemens, ats: jsonld, url: https://www.siemens.com/global/en/company/jobs.html, regions: [europe, north_america, asia, middle_east, africa], industries: [manufacturing, technology, energy], job_functions: [engineering, data_ai, product, finance, business, sales, operations, marketing, hr]}
+  - {name: Bosch, ats: jsonld, url: https://www.bosch.com/careers/, regions: [europe, north_america, asia, australia], industries: [automotive, manufacturing, technology], job_functions: [engineering, data_ai, product, finance, business, operations, sales, ui_ux_design]}
+  - {name: Nokia, ats: jsonld, url: https://www.nokia.com/careers/, regions: [europe, asia, north_america, middle_east], industries: [telecom, technology], job_functions: [engineering, data_ai, product, sales, finance, business, operations]}
+  - {name: ASML, ats: jsonld, url: https://www.asml.com/en/careers, regions: [europe, north_america, asia], industries: [semiconductor, manufacturing], job_functions: [engineering, data_ai, research, product, finance, business, operations]}
+  - {name: ARM, ats: jsonld, url: https://careers.arm.com/, regions: [europe, north_america, asia], industries: [semiconductor, technology], job_functions: [engineering, data_ai, research, product, finance, business, sales]}
+
+  # =========================
+  # CONSULTING / PROFESSIONAL SERVICES
+  # =========================
+  - {name: Accenture, ats: jsonld, url: https://www.accenture.com/us-en/careers, regions: [north_america, europe, asia, middle_east, africa, australia, latin_america], industries: [consulting, technology], job_functions: [engineering, data_ai, business, finance, sales, marketing, operations, hr, ui_ux_design]}
+  - {name: Deloitte, ats: jsonld, url: https://www.deloitte.com/global/en/careers.html, regions: [north_america, europe, asia, middle_east, africa, australia], industries: [consulting, financial_services], job_functions: [engineering, data_ai, business, finance, sales, marketing, operations, hr, legal]}
+  - {name: EY, ats: jsonld, url: https://www.ey.com/en_gl/careers, regions: [north_america, europe, asia, middle_east, africa, australia], industries: [consulting, financial_services], job_functions: [engineering, data_ai, business, finance, sales, marketing, operations, hr, legal]}
+  - {name: KPMG, ats: jsonld, url: https://kpmg.com/xx/en/home/careers.html, regions: [north_america, europe, asia, middle_east, africa, australia], industries: [consulting, financial_services], job_functions: [engineering, data_ai, business, finance, sales, marketing, operations, hr, legal]}
+  - {name: McKinsey, ats: jsonld, url: https://www.mckinsey.com/careers, regions: [north_america, europe, asia, middle_east, africa, australia], industries: [consulting], job_functions: [business, data_ai, finance, operations, engineering, marketing, hr]}
+  - {name: Boston Consulting Group, ats: jsonld, url: https://careers.bcg.com/, regions: [north_america, europe, asia, middle_east, africa, australia], industries: [consulting], job_functions: [business, data_ai, finance, operations, engineering, marketing, hr]}
+  - {name: Capgemini, ats: jsonld, url: https://www.capgemini.com/in-en/careers/join-capgemini/job-search, regions: [europe, north_america, asia, middle_east], industries: [consulting, technology], job_functions: [engineering, data_ai, business, finance, sales, operations, ui_ux_design, marketing]}
+
+  # =========================
+  # BANKING / FINANCE / INSURANCE
+  # =========================
+  - {name: Munich Re, ats: jsonld, url: https://careers.munichre.com/en/search-jobs, regions: [europe, north_america, asia, middle_east, africa, latin_america, australia], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, marketing, legal, hr]}
+  - {name: Goldman Sachs, ats: jsonld, url: https://www.goldmansachs.com/careers/, regions: [north_america, europe, asia], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: Morgan Stanley, ats: jsonld, url: https://www.morganstanley.com/people-opportunities, regions: [north_america, europe, asia], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: Citigroup, ats: jsonld, url: https://jobs.citi.com/, regions: [north_america, europe, asia, middle_east], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: Barclays, ats: jsonld, url: https://home.barclays/careers/, regions: [europe, north_america, asia], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: UBS, ats: jsonld, url: https://www.ubs.com/global/en/careers.html, regions: [europe, north_america, asia, middle_east], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: Deutsche Bank, ats: jsonld, url: https://careers.db.com/, regions: [europe, asia, north_america, middle_east], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: Standard Chartered, ats: jsonld, url: https://www.sc.com/en/global-careers/, regions: [asia, middle_east, africa, europe], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: DBS, ats: jsonld, url: https://www.dbs.com/careers, regions: [asia], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: RBC, ats: jsonld, url: https://jobs.rbc.com/, regions: [north_america], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: TD Bank, ats: jsonld, url: https://jobs.td.com/, regions: [north_america], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+  - {name: Emirates NBD, ats: jsonld, url: https://www.emiratesnbd.com/en/careers, regions: [middle_east, asia], industries: [financial_services], job_functions: [engineering, data_ai, finance, business, risk, operations, sales, legal]}
+
+  # =========================
+  # AUTOMOTIVE / AEROSPACE / INDUSTRIAL
+  # =========================
+  - {name: KPIT, ats: jsonld, url: https://www.kpit.com/job-listing/, regions: [asia, europe, north_america], industries: [automotive, technology, manufacturing], job_functions: [engineering, data_ai, product, research, finance, business, operations, sales]}
+  - {name: Aptiv, ats: jsonld, url: https://www.aptiv.com/en/jobs/search, regions: [north_america, europe, asia, middle_east, africa, australia], industries: [automotive, technology, manufacturing, telecom], job_functions: [engineering, data_ai, product, research, finance, business, operations, sales, ui_ux_design]}
+  - {name: BMW Group, ats: jsonld, url: https://www.bmwgroup.jobs/, regions: [europe, north_america, asia], industries: [automotive, manufacturing], job_functions: [engineering, data_ai, product, finance, business, operations, sales, ui_ux_design]}
+  - {name: Mercedes-Benz, ats: jsonld, url: https://group.mercedes-benz.com/careers/, regions: [europe, north_america, asia], industries: [automotive, manufacturing], job_functions: [engineering, data_ai, product, finance, business, operations, sales, ui_ux_design]}
+  - {name: Porsche, ats: jsonld, url: https://www.porsche.com/germany/aboutporsche/jobs/, regions: [europe, north_america, asia], industries: [automotive, manufacturing], job_functions: [engineering, data_ai, product, finance, business, operations, sales]}
+  - {name: Honda, ats: jsonld, url: https://jobs.honda.com/, regions: [north_america, asia], industries: [automotive, manufacturing], job_functions: [engineering, data_ai, product, finance, business, operations]}
+  - {name: Hyundai, ats: jsonld, url: https://www.hyundai.com/worldwide/en/company/careers, regions: [asia, north_america, europe, middle_east], industries: [automotive, manufacturing], job_functions: [engineering, data_ai, product, finance, business, operations, sales]}
+  - {name: Airbus, ats: jsonld, url: https://www.airbus.com/en/careers, regions: [europe, north_america, asia], industries: [aerospace, manufacturing], job_functions: [engineering, data_ai, research, finance, business, operations, sales]}
+  - {name: Boeing, ats: jsonld, url: https://jobs.boeing.com/, regions: [north_america, europe, asia], industries: [aerospace, manufacturing], job_functions: [engineering, data_ai, research, finance, business, operations, sales]}
+  - {name: Schneider Electric, ats: jsonld, url: https://www.se.com/ww/en/about-us/careers/, regions: [europe, north_america, asia, middle_east], industries: [energy, manufacturing, technology], job_functions: [engineering, data_ai, finance, business, sales, operations, product]}
+  - {name: Honeywell, ats: jsonld, url: https://careers.honeywell.com/, regions: [north_america, europe, asia, middle_east], industries: [manufacturing, aerospace, technology], job_functions: [engineering, data_ai, finance, business, sales, operations]}
+
+  # =========================
+  # HEALTHCARE / PHARMA / BIOTECH
+  # =========================
+  - {name: Roche, ats: jsonld, url: https://careers.roche.com/, regions: [europe, north_america, asia], industries: [healthcare, pharma_biotech], job_functions: [engineering, data_ai, research, finance, business, sales, operations, healthcare]}
+  - {name: Novartis, ats: jsonld, url: https://www.novartis.com/careers, regions: [europe, north_america, asia, middle_east], industries: [healthcare, pharma_biotech], job_functions: [engineering, data_ai, research, finance, business, sales, operations, healthcare]}
+  - {name: AstraZeneca, ats: jsonld, url: https://careers.astrazeneca.com/, regions: [europe, north_america, asia], industries: [healthcare, pharma_biotech], job_functions: [engineering, data_ai, research, finance, business, sales, operations, healthcare]}
+  - {name: GSK, ats: jsonld, url: https://jobs.gsk.com/, regions: [europe, north_america, asia, middle_east], industries: [healthcare, pharma_biotech], job_functions: [engineering, data_ai, research, finance, business, sales, operations, healthcare]}
+
+  # =========================
+  # TRAVEL / MEDIA / CONSUMER
+  # =========================
+  - {name: Booking.com, ats: jsonld, url: https://careers.booking.com/, regions: [europe, north_america, asia], industries: [travel, technology], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, sales, marketing, operations]}
+  - {name: TikTok, ats: jsonld, url: https://lifeattiktok.com/, regions: [north_america, europe, asia, middle_east], industries: [internet_media, technology], job_functions: [engineering, data_ai, product, ui_ux_design, marketing, sales, finance, business, operations]}
+  - {name: ByteDance, ats: jsonld, url: https://jobs.bytedance.com/, regions: [asia, north_america, europe, middle_east], industries: [internet_media, technology, ai_ml], job_functions: [engineering, data_ai, product, ui_ux_design, marketing, sales, finance, business, operations]}
+  - {name: Snap, ats: jsonld, url: https://www.snap.com/en-US/jobs, regions: [north_america, europe], industries: [internet_media, technology], job_functions: [engineering, data_ai, product, ui_ux_design, marketing, sales, finance, business]}
+  - {name: eBay, ats: jsonld, url: https://jobs.ebayinc.com/, regions: [north_america, europe, asia], industries: [ecommerce, technology], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, sales, marketing, operations]}
+  - {name: Walmart, ats: jsonld, url: https://careers.walmart.com/, regions: [north_america, asia], industries: [ecommerce, retail, logistics], job_functions: [engineering, data_ai, product, finance, business, sales, marketing, operations]}
+  - {name: Nike, ats: jsonld, url: https://careers.nike.com/, regions: [north_america, europe, asia], industries: [retail], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, sales, marketing, operations]}
+  - {name: Emirates Group, ats: jsonld, url: https://www.emiratesgroupcareers.com/, regions: [middle_east, asia, europe, africa], industries: [travel, logistics], job_functions: [engineering, data_ai, finance, business, sales, marketing, operations, hr]}
+  - {name: Etihad Airways, ats: jsonld, url: https://careers.etihad.com/, regions: [middle_east, europe, asia, africa], industries: [travel], job_functions: [engineering, data_ai, finance, business, sales, marketing, operations, hr]}
+  - {name: Careem, ats: jsonld, url: https://www.careem.com/en-AE/careers/, regions: [middle_east, asia], industries: [technology, mobility, fintech, logistics], job_functions: [engineering, data_ai, product, finance, business, sales, marketing, operations, ui_ux_design]}
+  - {name: Talabat, ats: jsonld, url: https://careers.talabat.com/, regions: [middle_east], industries: [food, ecommerce, logistics, technology], job_functions: [engineering, data_ai, product, finance, business, sales, marketing, operations]}
+
+  # =========================
+  # AUSTRALIA / CANADA / SINGAPORE / JAPAN / KOREA
+  # =========================
+  - {name: Atlassian, ats: jsonld, url: https://www.atlassian.com/company/careers, regions: [australia, north_america, europe, asia], industries: [technology], job_functions: [engineering, data_ai, product, ui_ux_design, sales, marketing, finance, business]}
+  - {name: SEEK, ats: jsonld, url: https://www.seek.com.au/about/careers, regions: [australia, asia], industries: [technology], job_functions: [engineering, data_ai, product, ui_ux_design, sales, marketing, finance, business]}
+  - {name: WiseTech Global, ats: jsonld, url: https://www.wisetechglobal.com/careers/, regions: [australia, europe, asia], industries: [logistics, technology], job_functions: [engineering, data_ai, product, finance, business, operations, sales]}
+  - {name: Hootsuite, ats: greenhouse, token: hootsuite, regions: [north_america, europe], industries: [technology, internet_media], job_functions: [engineering, data_ai, product, ui_ux_design, sales, marketing, finance, business]}
+  - {name: Sea Group, ats: jsonld, url: https://www.sea.com/careers, regions: [asia], industries: [technology, ecommerce, fintech, gaming], job_functions: [engineering, data_ai, product, finance, business, sales, marketing, operations]}
+  - {name: Shopee, ats: jsonld, url: https://careers.shopee.sg/, regions: [asia], industries: [ecommerce, technology], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, sales, marketing, operations]}
+  - {name: Sony, ats: jsonld, url: https://www.sony.com/en/SonyInfo/Careers/, regions: [asia, north_america, europe], industries: [technology, gaming, internet_media], job_functions: [engineering, data_ai, research, product, ui_ux_design, finance, business, sales, operations]}
+  - {name: Rakuten, ats: jsonld, url: https://global.rakuten.com/corp/careers/, regions: [asia, north_america, europe], industries: [ecommerce, fintech, technology], job_functions: [engineering, data_ai, product, finance, business, sales, marketing, operations]}
+  - {name: Mercari, ats: jsonld, url: https://careers.mercari.com/, regions: [asia], industries: [ecommerce, technology], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, sales, marketing]}
+  - {name: LG, ats: jsonld, url: https://www.lg.com/global/careers, regions: [asia, north_america, europe], industries: [technology, manufacturing], job_functions: [engineering, data_ai, product, finance, business, sales, operations, ui_ux_design]}
+  - {name: Naver, ats: jsonld, url: https://recruit.navercorp.com/, regions: [asia], industries: [internet_media, technology, ai_ml], job_functions: [engineering, data_ai, product, ui_ux_design, research, finance, business, marketing]}
+
+  # =========================
+  # EUROPEAN TECHNOLOGY / CONSUMER
+  # =========================
+  - {name: The Digital Hub, ats: jsonld, url: https://thedigitalhub.com/jobs/, regions: [europe], industries: [technology, internet_media], job_functions: [engineering, data_ai, product, ui_ux_design, business, operations, marketing, sales]}
+  - {name: Darktrace, ats: jsonld, url: https://careers.darktrace.com/, regions: [europe, north_america, asia], industries: [cybersecurity, ai_ml], job_functions: [engineering, data_ai, research, product, sales, finance, business]}
+  - {name: Ubisoft, ats: jsonld, url: https://www.ubisoft.com/en-us/company/careers, regions: [europe, north_america, asia], industries: [gaming, technology], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, marketing, operations]}
+  - {name: Orange, ats: jsonld, url: https://orange.jobs/, regions: [europe, africa, middle_east], industries: [telecom, technology], job_functions: [engineering, data_ai, product, finance, business, sales, marketing, operations]}
+
+  # =========================
+  # MIDDLE EAST / AFRICA / LATAM
+  # =========================
+  - {name: Mubadala, ats: jsonld, url: https://www.mubadala.com/careers, regions: [middle_east, europe, north_america, asia], industries: [financial_services], job_functions: [finance, investment, business, data_ai, engineering, operations, legal]}
+  - {name: Mashreq, ats: jsonld, url: https://www.mashreq.com/en/uae/about-us/careers/, regions: [middle_east], industries: [financial_services], job_functions: [engineering, data_ai, finance, risk, business, sales, operations, legal]}
+  - {name: Andela, ats: jsonld, url: https://www.andela.com/careers/, regions: [africa, north_america, europe], industries: [technology, consulting], job_functions: [engineering, data_ai, product, sales, business, operations, hr]}
+  - {name: M-KOPA, ats: jsonld, url: https://m-kopa.com/careers/, regions: [africa, europe], industries: [fintech, energy, technology], job_functions: [engineering, data_ai, finance, business, sales, operations, product]}
+  - {name: iFood, ats: jsonld, url: https://carreiras.ifood.com.br/, regions: [latin_america], industries: [food, logistics, technology], job_functions: [engineering, data_ai, product, finance, business, sales, marketing, operations]}
+
+  # =========================
+  # NEW SOURCES — 2026-10-06
+  # =========================
+  # These include employer career sites and job/recruitment portals supplied by the user.
+  - {name: Randstad India, ats: jsonld, url: "https://www.randstad.in/jobs/", regions: [asia], industries: [recruitment, consulting], job_functions: [engineering, data_ai, finance, business, sales, marketing, operations, hr]}
+  - {name: Aspire Kerala Jobs, ats: jsonld, url: "https://aspirekeralajobs.com/job_search.php", regions: [asia], industries: [recruitment], job_functions: [engineering, data_ai, finance, business, sales, marketing, operations, hr]}
+  - {name: Tata Group, ats: jsonld, url: "https://www.tata.com/careers/jobs/joblisting", regions: [asia, north_america, europe, middle_east, africa, australia], industries: [technology, manufacturing, financial_services, travel, retail], job_functions: [engineering, data_ai, product, research, finance, business, sales, marketing, operations, hr]}
+  - {name: Titan Company, ats: jsonld, url: "https://careers.titan.in/in/en/search-results", regions: [asia], industries: [retail, manufacturing, technology], job_functions: [engineering, data_ai, product, finance, business, sales, marketing, operations, hr]}
+
+  # =========================
+  # ADDITIONAL CAREER SOURCES / JOB PORTALS
+  # =========================
+  - {name: Lufthansa Group, ats: jsonld, url: "https://apply.lufthansagroup.careers/index.php?ac=search_result&search_criterion_channel%5B%5D=12", regions: [europe, north_america, asia, middle_east, africa], industries: [travel, logistics], job_functions: [engineering, data_ai, finance, business, sales, marketing, operations, hr]}
+  - {name: Jobs in Japan, ats: jsonld, url: "https://jobsinjapan.com/jobs/", regions: [asia], industries: [recruitment, education, technology], job_functions: [engineering, data_ai, business, sales, marketing, operations, hr, education]}
+  - {name: Dubai Careers, ats: jsonld, url: "https://dubaicareers.ae/en/pages/default.aspx", regions: [middle_east], industries: [government, public_sector], job_functions: [engineering, data_ai, finance, business, sales, operations, hr, legal, healthcare]}
+  - {name: FIFA, ats: jsonld, url: "https://jobs.fifa.com/", regions: [europe, north_america, asia, middle_east, africa, latin_america], industries: [sports, internet_media], job_functions: [engineering, data_ai, finance, business, sales, marketing, operations, hr, legal]}
+  - {name: MAS Financial Services, ats: jsonld, url: "https://mas.co.in/current-openings/", regions: [asia], industries: [financial_services], job_functions: [finance, risk, business, sales, operations, hr]}
+  - {name: Make it in Germany, ats: jsonld, url: "https://www.make-it-in-germany.com/en/working-in-germany/job-listings", regions: [europe], industries: [recruitment, government, public_sector], job_functions: [engineering, healthcare, manufacturing, logistics, education, business, finance, it]}
+  - {name: Michael Page India, ats: jsonld, url: "https://www.michaelpage.co.in/jobs", regions: [asia], industries: [recruitment], job_functions: [engineering, data_ai, finance, business, sales, marketing, operations, hr]}
+
+  # =========================
+  # WORKABLE BOARDS (current public Workable accounts)
+  # =========================
+  - {name: Adzuna, ats: workable, token: adzuna-2, regions: [europe, north_america, asia], industries: [technology], job_functions: [engineering, data_ai, finance, sales, business, marketing]}
+  - {name: Pharmathen, ats: workable, token: pharmathen, regions: [europe], industries: [pharma_biotech, healthcare], job_functions: [research, finance, operations, hr, business, healthcare]}
+  - {name: Starling Bank, ats: workable, token: starling-bank, regions: [europe], industries: [fintech, financial_services], job_functions: [engineering, data_ai, finance, risk, product, business, operations, legal]}
+  - {name: Lucidya, ats: workable, token: lucidya, regions: [middle_east, asia, africa], industries: [technology, ai_ml], job_functions: [engineering, data_ai, product, ui_ux_design, sales, marketing, business]}
+  - {name: Mindex, ats: workable, token: mindex, regions: [north_america], industries: [technology, education], job_functions: [engineering, data_ai, product, ui_ux_design, operations]}
+  - {name: Vista Group, ats: workable, token: vista-group, regions: [australia, asia, europe], industries: [technology, travel], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business]}
+  - {name: Decisions, ats: workable, token: decisions, regions: [north_america, europe], industries: [technology], job_functions: [engineering, product, sales, business, marketing, finance]}
