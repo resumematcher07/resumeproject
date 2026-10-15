@@ -124,7 +124,7 @@ def validate_registry():
     invalid = []
     for c in cs:
         ats = c.get("ats")
-        if ats not in {"greenhouse", "lever", "ashby", "workable", "jsonld"}:
+        if ats not in {"greenhouse", "lever", "ashby", "workable", "jsonld", "html", "eightfold"}:
             invalid.append((c.get("name"), "ats"))
         if not c.get("name") or not (c.get("token") or c.get("url")):
             invalid.append((c.get("name"), "source"))
