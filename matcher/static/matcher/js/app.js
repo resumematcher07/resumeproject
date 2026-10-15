@@ -108,17 +108,51 @@
     var any = document.querySelector('.job[data-fit="0"]:not([hidden])');
     document.querySelectorAll('.over-note').forEach(function (n) { n.hidden = !any; });
   }
+  // Search (title / company / place / skills) combines with the pill filters: a job shows only if it passes both.
+  var activeFilter = 'all';
+  var box = document.getElementById('jobSearch');
+  var clearBtn = document.getElementById('searchClear');
+  var countEl = document.getElementById('searchCount');
+  var noMatch = document.getElementById('noMatch');
+  function norm(t) { return (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  function applyFilters() {
+    var terms = box ? norm(box.value).split(/\s+/).filter(Boolean) : [];
+    var shown = 0, total = 0;
+    document.querySelectorAll('.job').forEach(function (j) {
+      total++;
+      var passFilter = activeFilter === 'all' || (activeFilter === 'exp' ? matchesExperience(j) : j.dataset.verdict === activeFilter);
+      var hay = j._hay || (j._hay = norm(j.dataset.search));
+      var passSearch = terms.every(function (t) { return hay.indexOf(t) !== -1; });
+      j.hidden = !(passFilter && passSearch);
+      if (!j.hidden) shown++;
+    });
+    if (box) {
+      box.parentNode.classList.toggle('has-text', !!box.value);
+      clearBtn.hidden = !box.value;
+      countEl.textContent = (terms.length || activeFilter !== 'all') ? shown + ' of ' + total : '';
+    }
+    if (noMatch) noMatch.hidden = shown > 0 || total === 0;
+    syncDividers();
+  }
   document.querySelectorAll('.pill[data-filter]').forEach(function (p) {
     p.addEventListener('click', function () {
       document.querySelectorAll('.pill').forEach(function (x) { x.classList.remove('active'); });
       p.classList.add('active');
-      var f = p.dataset.filter;
-      document.querySelectorAll('.job').forEach(function (j) {
-        j.hidden = !(f === 'all' || (f === 'exp' ? matchesExperience(j) : j.dataset.verdict === f));
-      });
-      syncDividers();
+      activeFilter = p.dataset.filter;
+      applyFilters();
     });
   });
+  if (box) {
+    box.addEventListener('input', applyFilters);
+    box.addEventListener('keydown', function (e) { if (e.key === 'Escape') { box.value = ''; applyFilters(); } });
+    function reset() { box.value = ''; applyFilters(); box.focus(); }
+    clearBtn.addEventListener('click', reset);
+    var nr = document.getElementById('noMatchReset'); if (nr) nr.addEventListener('click', reset);
+    document.addEventListener('keydown', function (e) {       // "/" jumps to the search box
+      var t = e.target.tagName;
+      if (e.key === '/' && t !== 'INPUT' && t !== 'TEXTAREA' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); box.focus(); }
+    });
+  }
 })();
 
 // ---- LaTeX editor: compile + preview ----
