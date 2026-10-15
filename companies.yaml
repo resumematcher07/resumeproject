@@ -13,6 +13,12 @@
 
 companies:
   # =========================
+  # DIRECT CAREER-PAGE SOURCES (ats: html / eightfold) - see matcher/services/pages.py
+  # =========================
+  - {name: Bank of America, ats: html, url: "https://careers.bankofamerica.com/en-us/job-search/india", link_pattern: "/job-detail/", page_param: start, page_step: 10, max_pages: 10, regions: [asia], industries: [financial_services], job_functions: [engineering, data_ai, finance, operations, business]}
+  - {name: BlackRock, ats: html, url: "https://careers.blackrock.com/search-jobs", link_pattern: "/job/", page_param: p, page_start: 1, page_step: 1, max_pages: 10, regions: [north_america, europe, asia], industries: [financial_services], job_functions: [engineering, data_ai, finance, operations, business]}
+  - {name: HSBC, ats: eightfold, url: "https://portal.careers.hsbc.com/careers", domain: hsbc.com, location: India, max_pages: 10, regions: [asia, europe], industries: [financial_services], job_functions: [engineering, data_ai, finance, operations, business]}
+  # =========================
   # GLOBAL TECH / ORIGINAL ATS BOARDS
   # =========================
   - {name: Stripe, ats: greenhouse, token: stripe, regions: [north_america, europe, asia, middle_east], industries: [fintech, technology], job_functions: [engineering, data_ai, product, ui_ux_design, finance, business, sales, marketing, operations, legal, hr]}
