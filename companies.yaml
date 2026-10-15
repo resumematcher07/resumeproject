@@ -272,7 +272,7 @@ companies:
   # =========================
   # ADDITIONAL CAREER SOURCES / JOB PORTALS
   # =========================
-  - {name: Aabasoft, ats: jsonld, url: "https://www.aabasoft.com/us-en/career/", regions: [asia, north_america], industries: [technology, consulting], job_functions: [engineering, data_ai, ui_ux_design, business, sales, marketing, operations, hr]}
+  - {name: Aabasoft, ats: jsonld, url: "https://www.aabasoft.com/in-en/join-our-team", regions: [asia, north_america], industries: [technology, consulting], job_functions: [engineering, data_ai, ui_ux_design, business, sales, marketing, operations, hr]}
   - {name: Lufthansa Group, ats: jsonld, url: "https://apply.lufthansagroup.careers/index.php?ac=search_result&search_criterion_channel%5B%5D=12", regions: [europe, north_america, asia, middle_east, africa], industries: [travel, logistics], job_functions: [engineering, data_ai, finance, business, sales, marketing, operations, hr]}
   - {name: Jobs in Japan, ats: jsonld, url: "https://jobsinjapan.com/jobs/", regions: [asia], industries: [recruitment, education, technology], job_functions: [engineering, data_ai, business, sales, marketing, operations, hr, education]}
   - {name: Dubai Careers, ats: jsonld, url: "https://dubaicareers.ae/en/pages/default.aspx", regions: [middle_east], industries: [government, public_sector], job_functions: [engineering, data_ai, finance, business, sales, operations, hr, legal, healthcare]}
