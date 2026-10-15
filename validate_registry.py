@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent
-ALLOWED_ATS = {"greenhouse", "lever", "ashby", "workable", "jsonld"}
+ALLOWED_ATS = {"greenhouse", "lever", "ashby", "workable", "jsonld", "html", "eightfold"}
 
 companies = yaml.safe_load((ROOT / "companies.yaml").read_text(encoding="utf-8"))['companies']
 functions = yaml.safe_load((ROOT / "job_functions.yaml").read_text(encoding="utf-8"))['job_functions']
@@ -21,9 +21,9 @@ for c in companies:
         errors.append(f"{c.get('name')}: unsupported ATS {c.get('ats')}")
     if not c.get('name'):
         errors.append('company without name')
-    if c.get('ats') == 'jsonld' and not c.get('url'):
+    if c.get('ats') in ('jsonld', 'html', 'eightfold') and not c.get('url'):
         errors.append(f"{c.get('name')}: jsonld source has no url")
-    if c.get('ats') != 'jsonld' and not c.get('token'):
+    if c.get('ats') not in ('jsonld', 'html', 'eightfold') and not c.get('token'):
         errors.append(f"{c.get('name')}: {c.get('ats')} source has no token")
 
 for park in parks:
