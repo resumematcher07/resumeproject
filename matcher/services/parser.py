@@ -9,12 +9,33 @@ from .skills_data import find_certs, find_skills, flat_skills
 # ---------- text extraction ----------
 
 
+_DATE_ONLY = re.compile(r"^\s*(?:(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}(?:\s*[-–—]\s*(?:(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}|present|current|now))?)\s*$", re.I)
+
+
+def _orphan_dates(text):
+    """True when right-aligned dates were dumped as a block at the very end (they lost their role / school line)."""
+    tail = [l for l in text.splitlines() if l.strip()][-6:]
+    n = 0
+    for l in reversed(tail):
+        if not _DATE_ONLY.match(l):
+            break
+        n += 1
+    return n >= 2
+
+
 def _pdf_text(data):
     """pdfminer keeps word spacing right ('preprocessed 500K+', 'Developed XGBoost'); pypdf glues words across font changes.
-    pypdf stays as the fallback for files pdfminer cannot read."""
+    pypdf stays as the fallback for files pdfminer cannot read.
+    Right-aligned dates ('Aug 2022 - Jun 2026') can be read as a separate block after the whole page; when that happens
+    the page is read again in plain top-to-bottom order, which keeps every date on its own line."""
     try:
         from pdfminer.high_level import extract_text as _pm_extract
         text = _pm_extract(io.BytesIO(data))
+        if _orphan_dates(text):
+            from pdfminer.layout import LAParams
+            alt = _pm_extract(io.BytesIO(data), laparams=LAParams(boxes_flow=None, line_margin=0.3))
+            if not _orphan_dates(alt):
+                text = alt
         text = re.sub(r"[ \t]*\n\s*\n+", "\n", text)                    # pdfminer double-spaces lines
         if len(text.split()) >= 20:
             return text
@@ -72,6 +93,7 @@ def repair_text(text):
     text = re.sub(r"(?<=[A-Za-z])[\x0c\x0b�](?=[A-Za-z])", "fi", text)   # the PDF "fi" glyph arrives as a control char
     text = text.replace("\x0c", "\n").replace("\x0b", " ")
     text = re.sub(r"(?m)^\s*[{•●▪■◦○·⁃∙]\s*", "• ", text)
+    text = re.sub(r"(?<=\S)[ \t]{2,}(?=\S)", " ", text)                  # justified PDF lines: "Reliable  IT  Support" -> single spaces
     text = re.sub(r"(?<=\S) [jJ] (?=\S)", " | ", text)               # "a j b" is a pipe separator
     for rx, rep in _FI_REPAIRS.items():
         text = re.sub(rx, rep, text)
@@ -90,7 +112,7 @@ HEADERS = {
     "certifications": r"(licen[cs]es? (&|and) )?certifications?|certificates?|licen[cs]es?|courses|training|professional development",
     "projects": r"(personal |academic |key |selected |notable |mini )?projects?",
     "achievements": r"achievements?|awards?( & honou?rs)?|honou?rs|accomplishments?",
-    "languages": r"languages?",
+    "languages": r"languages?( known| spoken| proficiency)?",
     "additional": r"additional( information| details)?|other( information| details)?|interests|hobbies|miscellaneous|references|declaration|personal (details|information)",
     "activities": r"(community|volunteer|leadership|extra[- ]?curricular|social)[a-z &/]*|activities|positions of responsibility",
 }
@@ -315,7 +337,7 @@ def find_titles(exp_lines, header_lines):
             titles.append(t)
     headline = None
     for line in header_lines[:6]:
-        if EMAIL.search(line) or PHONE.search(line) or len(line) > 70:
+        if EMAIL.search(line) or PHONE.search(line) or len(line) > 120:
             continue
         t = _clean_title(line)
         if t:
@@ -483,6 +505,8 @@ def parse_resume(text):
     titles, headline = find_titles(exp, header)
     latest_role = titles[0] if titles else None
     summary_title = title_from_summary(summary_text)
+    if headline and summary_title and summary_title.lower() != headline.lower() and summary_title.lower().endswith(" " + headline.lower()):
+        summary_title = headline                                    # "Reliable IT Support Engineer" -> the headline "IT Support Engineer"
     primary = summary_title or headline or latest_role              # the job the candidate says they are
     all_titles = list(dict.fromkeys(t for t in [primary, headline, *titles] if t))
 
