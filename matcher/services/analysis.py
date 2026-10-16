@@ -47,6 +47,7 @@ FAMILIES = {
     "design": {"ui", "ux", "uiux", "design", "designer", "graphic", "visual", "interaction", "creative", "figma", "illustrator", "animator", "motion"},
     "software": {"engineer", "frontend", "backend", "fullstack", "software", "web", "mobile", "android", "ios", "programmer", "react", "python", "java", "node"},
     "data": {"data", "analyst", "analytics", "scientist", "machinelearning", "bi", "statistician"},
+    "itsupport": {"it", "support", "helpdesk", "desk", "servicedesk", "desktop", "technician", "l1", "l2", "l3", "itsm", "noc", "sysadmin", "systems"},
     "test": {"test", "qa", "quality", "automation"},
     "devops": {"devops", "cloud", "infrastructure", "sysadmin", "network", "security"},
     "product": {"product", "manager", "owner", "scrum", "project", "program"},
