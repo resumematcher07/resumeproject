@@ -198,5 +198,17 @@ Wrong ATS/token guesses are auto-corrected by trying Greenhouse, Lever, Ashby an
   from `companies.yaml`.
 - Measured with 200 simulated sources (random 0.2-12 s latencies, 15 % dead): cold search ~12-25 s (first ever), warm search 0.04 s,
   search right after cache expiry 0.2 s.
-"# resumeproject" 
-"# resumeproject" 
+
+
+## Working samples:
+
+**Home Page**
+<img width="1906" height="1073" alt="image" src="https://github.com/user-attachments/assets/10195289-2232-4eb6-be4c-b9522f017e71" />
+
+**Resume Parsed Page**
+<img width="1907" height="1075" alt="image" src="https://github.com/user-attachments/assets/e5fc73f3-b5aa-499d-94e4-10bdf9031bf7" />
+
+**Job Analyzed Page**
+<img width="1902" height="1068" alt="image" src="https://github.com/user-attachments/assets/b7083f1a-8db5-4730-a993-10c70bfbbef9" />
+
+
